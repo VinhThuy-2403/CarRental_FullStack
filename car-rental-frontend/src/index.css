@@ -1,1 +1,83 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface text-primary font-sans;
+    min-height: 100vh;
+  }
+
+  input, textarea, select {
+    @apply font-sans;
+  }
+}
+
+@layer components {
+  /* Skeleton loader */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      theme('colors.surface.muted') 25%,
+      theme('colors.border.DEFAULT') 50%,
+      theme('colors.surface.muted') 75%
+    );
+    background-size: 200% auto;
+    animation: shimmer 1.4s linear infinite;
+    border-radius: 8px;
+  }
+
+  /* Focus ring chuẩn */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-teal-400/30 focus:border-teal-400;
+  }
+
+  /* Input base style */
+  .input-base {
+    @apply w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-sm
+           text-primary placeholder:text-primary-subtle
+           hover:border-border-strong transition-all duration-150
+           focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400;
+  }
+
+  /* Card base */
+  .card {
+    @apply bg-surface border border-border rounded-2xl shadow-card;
+  }
+
+  /* Button variants */
+  .btn-primary {
+    @apply bg-primary text-white px-5 py-2.5 rounded-lg text-sm font-semibold
+           hover:bg-primary-soft active:scale-[0.97] transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-surface text-primary border border-border px-5 py-2.5 rounded-lg text-sm font-semibold
+           hover:bg-surface-soft active:scale-[0.97] transition-all duration-150;
+  }
+
+  .btn-teal {
+    @apply bg-teal-400 text-white px-5 py-2.5 rounded-lg text-sm font-semibold
+           hover:bg-teal-600 active:scale-[0.97] transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply text-teal-600 text-sm font-semibold hover:text-teal-800 transition-colors duration-150;
+  }
+
+  .btn-danger {
+    @apply bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-sm font-semibold
+           hover:bg-red-100 transition-all duration-150;
+  }
+}
