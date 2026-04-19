@@ -30,16 +30,21 @@ public class UserService {
     // ─── Update profile ──────────────────────────────────
 
     @Transactional
-    public UserProfileResponse updateProfile(UpdateProfileRequest request, User user) {
+    public UserProfileResponse updateProfile(UpdateProfileRequest request, User userPrincipal) {
+        // 1. Tìm lại user mới nhất từ Database
+        User user = userRepository.findById(userPrincipal.getId())
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy người dùng"));
+
+        // 2. Cập nhật thông tin
         user.setFullName(request.getFullName());
         if (request.getPhone() != null) {
             user.setPhone(request.getPhone());
         }
-
         if (request.getAddress() != null) {
             user.setAddress(request.getAddress());
         }
 
+        // 3. Lưu user đã lấy từ DB
         userRepository.save(user);
         return toProfileResponse(user);
     }
@@ -47,7 +52,11 @@ public class UserService {
     // ─── Upload avatar ───────────────────────────────────
 
     @Transactional
-    public UserProfileResponse uploadAvatar(MultipartFile file, User user) {
+    public UserProfileResponse uploadAvatar(MultipartFile file, User userPrincipal) {
+        // 1. Tìm lại user mới nhất từ Database
+        User user = userRepository.findById(userPrincipal.getId())
+                .orElseThrow(() -> AppException.notFound("Không tìm thấy người dùng"));
+
         if (file.isEmpty()) {
             throw AppException.badRequest("File không được để trống");
         }
@@ -70,6 +79,8 @@ public class UserService {
             );
 
             String avatarUrl = (String) uploadResult.get("secure_url");
+            
+            // 2. Cập nhật link ảnh vào user lấy từ DB
             user.setAvatarUrl(avatarUrl);
             userRepository.save(user);
 
