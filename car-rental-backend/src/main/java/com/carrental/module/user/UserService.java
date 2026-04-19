@@ -35,6 +35,11 @@ public class UserService {
         if (request.getPhone() != null) {
             user.setPhone(request.getPhone());
         }
+
+        if (request.getAddress() != null) {
+            user.setAddress(request.getAddress());
+        }
+
         userRepository.save(user);
         return toProfileResponse(user);
     }
@@ -103,6 +108,7 @@ public class UserService {
         res.setPhone(user.getPhone());
         res.setAvatarUrl(user.getAvatarUrl());
         res.setRole(user.getRole().name());
+        res.setAddress(user.getAddress());
         res.setStatus(user.getStatus().name());
         return res;
     }
