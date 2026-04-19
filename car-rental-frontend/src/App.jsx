@@ -5,6 +5,10 @@ import ProtectedRoute from "./components/common/ProtectedRoute";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 
+import HomePage      from '@/pages/public/HomePage'
+import CarSearchPage from '@/pages/public/CarSearchPage'
+import CarDetailPage from '@/pages/public/CarDetailPage'
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, staleTime: 1000 * 60 * 5 },
@@ -12,7 +16,7 @@ const queryClient = new QueryClient({
 })
 
 // Placeholder pages — thay bằng trang thật ở phase sau
-const HomePage     = () => <div className="p-8 text-center"><h1 className="text-2xl font-bold">Trang chủ — Phase 2</h1></div>
+//const HomePage     = () => <div className="p-8 text-center"><h1 className="text-2xl font-bold">Trang chủ — Phase 2</h1></div>
 const ProfilePage  = () => <div className="p-8 text-center"><h1 className="text-2xl font-bold">Profile</h1></div>
 const HostPage     = () => <div className="p-8 text-center"><h1 className="text-2xl font-bold">Host Dashboard</h1></div>
 const AdminPage    = () => <div className="p-8 text-center"><h1 className="text-2xl font-bold">Admin Dashboard</h1></div>
@@ -50,6 +54,10 @@ export default function App() {
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
+
+          <Route path="/"         element={<HomePage />} />
+          <Route path="/cars"     element={<CarSearchPage />} />
+          <Route path="/cars/:id" element={<CarDetailPage />} />
         </Routes>
 
         <Toaster
