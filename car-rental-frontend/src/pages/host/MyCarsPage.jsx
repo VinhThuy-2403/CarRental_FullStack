@@ -219,7 +219,7 @@ export default function MyCarsPage() {
                   <div className="flex flex-col gap-2 md:flex-col md:justify-start">
                     {car.status === 'REJECTED' ? (
                       <button
-                        onClick={() => navigate(`/host/cars/${car.id}`)}
+                        onClick={() => navigate(`/host/cars/${car.id}/edit`)}
                         className="flex items-center gap-2 px-3 py-2 bg-amber-600 text-white
                                    rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors"
                       >
@@ -228,7 +228,7 @@ export default function MyCarsPage() {
                       </button>
                     ) : car.status === 'PENDING' ? (
                       <button
-                        onClick={() => navigate(`/host/cars/${car.id}`)}
+                        onClick={() => navigate(`/host/cars/${car.id}/edit`)}
                         className="flex items-center gap-2 px-3 py-2 bg-primary text-white
                                    rounded-lg text-sm font-medium hover:bg-primary-soft transition-colors"
                       >
@@ -238,7 +238,7 @@ export default function MyCarsPage() {
                     ) : (
                       <>
                         <button
-                          onClick={() => navigate(`/host/cars/${car.id}`)}
+                          onClick={() => navigate(`/host/cars/${car.id}/edit`)}
                           className="flex items-center gap-2 px-3 py-2 bg-primary text-white
                                      rounded-lg text-sm font-medium hover:bg-primary-soft transition-colors"
                         >

@@ -317,6 +317,7 @@ public class CarService {
     public CarSummary toSummary(Car car) {
         CarSummary s = new CarSummary();
         s.setId(car.getId());
+        s.setLicensePlate(car.getLicensePlate());
         s.setBrand(car.getBrand());
         s.setModel(car.getModel());
         s.setYear(car.getYear());
@@ -332,6 +333,7 @@ public class CarService {
         s.setAvgRating(car.getAvgRating());
         s.setTotalReviews(car.getTotalReviews());
         s.setStatus(car.getStatus());
+        s.setRejectReason(car.getRejectReason());
         s.setCreatedAt(car.getCreatedAt());
         return s;
     }
@@ -339,6 +341,7 @@ public class CarService {
     public CarDetail toDetail(Car car) {
         CarDetail d = new CarDetail();
         d.setId(car.getId());
+        d.setLicensePlate(car.getLicensePlate());
         d.setBrand(car.getBrand());
         d.setModel(car.getModel());
         d.setYear(car.getYear());

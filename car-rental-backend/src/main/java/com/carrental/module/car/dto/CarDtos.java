@@ -69,6 +69,7 @@ public class CarDtos {
     @Data
     public static class CarSummary {
         private Long id;
+        private String licensePlate;  // fix: thêm vào để form edit lấy được
         private String brand;
         private String model;
         private Integer year;
@@ -84,6 +85,7 @@ public class CarDtos {
         private BigDecimal avgRating;
         private Integer totalReviews;
         private CarStatus status;
+        private String rejectReason;  // fix: thêm để MyCarsPage hiện lý do từ chối
         private LocalDateTime createdAt;
     }
 
@@ -92,6 +94,7 @@ public class CarDtos {
     public static class CarDetail {
         private Long id;
         private String brand;
+        private String licensePlate;
         private String model;
         private Integer year;
         private String fullName;
