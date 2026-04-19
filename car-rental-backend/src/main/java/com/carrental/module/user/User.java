@@ -48,6 +48,10 @@ public class User implements UserDetails {
     @Builder.Default
     private UserStatus status = UserStatus.UNVERIFIED;
 
+    // Thêm vào trong class User
+    @Column(name = "address")
+    private String address;
+
     // Dùng để reset mật khẩu
     private String resetPasswordToken;
     private LocalDateTime resetPasswordTokenExpiry;
@@ -90,4 +94,6 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return status == UserStatus.ACTIVE;
     }
+
+    
 }

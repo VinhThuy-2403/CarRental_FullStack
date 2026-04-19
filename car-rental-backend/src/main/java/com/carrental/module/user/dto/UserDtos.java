@@ -14,6 +14,7 @@ public class UserDtos {
         private String avatarUrl;
         private String role;
         private String status;
+        private String address;
     }
 
     @Data
@@ -24,6 +25,7 @@ public class UserDtos {
 
         @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$", message = "Số điện thoại không hợp lệ")
         private String phone;
+        private String address;
     }
 
     @Data
