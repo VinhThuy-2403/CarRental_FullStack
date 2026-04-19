@@ -71,6 +71,13 @@ export default function App() {
             </ProtectedRoute>
           } />
 
+          // Thêm vào SAU route /host/cars/new (dòng 57)
+          <Route path="/host/cars/:id/edit" element={
+            <ProtectedRoute roles={['HOST']}>
+              <CarFormPage />
+            </ProtectedRoute>
+          } />
+
           {/* 4. Trang Xem đơn đặt xe */}
           <Route path="/host/bookings" element={
             <ProtectedRoute roles={['HOST']}>
