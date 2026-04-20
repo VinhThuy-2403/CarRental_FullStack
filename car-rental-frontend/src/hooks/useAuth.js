@@ -28,6 +28,7 @@ export function useAuth() {
     isCustomer: store.isCustomer(),
     isHost:     store.isHost(),
     isAdmin:    store.isAdmin(),
+    updateUser: store.updateUser,
     logout,
   }
 }
