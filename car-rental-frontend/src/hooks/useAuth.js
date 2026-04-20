@@ -1,11 +1,13 @@
 import useAuthStore from '@/store/authStore'
 import { authApi } from '@/api/authApi'
+import { useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 
 export function useAuth() {
-  const store = useAuthStore()
-  const navigate = useNavigate()
+  const store       = useAuthStore()
+  const navigate    = useNavigate()
+  const queryClient = useQueryClient()
 
   const logout = async () => {
     try {
@@ -14,8 +16,12 @@ export function useAuth() {
         await authApi.logout(refreshToken)
       }
     } catch {
-      // ignore
+      // ignore — vẫn logout phía client dù server lỗi
     } finally {
+      // Xóa toàn bộ React Query cache để tài khoản mới
+      // không nhìn thấy data cũ của tài khoản trước
+      queryClient.clear()
+
       store.logout()
       toast.success('Đã đăng xuất')
       navigate('/login')

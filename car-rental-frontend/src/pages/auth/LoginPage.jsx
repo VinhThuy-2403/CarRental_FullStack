@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import { authApi } from '@/api/authApi'
 import useAuthStore from '@/store/authStore'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+import { useQueryClient } from '@tanstack/react-query'
 
 const schema = z.object({
   email:    z.string().email('Email không hợp lệ'),
@@ -26,6 +27,7 @@ export default function LoginPage() {
     resolver: zodResolver(schema),
   })
 
+  const queryClient = useQueryClient()
   const onSubmit = async (data) => {
     setLoading(true)
     try {
