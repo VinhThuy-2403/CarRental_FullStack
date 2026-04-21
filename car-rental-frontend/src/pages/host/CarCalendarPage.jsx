@@ -1,329 +1,380 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Lock, Unlock, Loader } from 'lucide-react'
-import { calendarApi } from '@/api/calendarApi'
+import { ChevronLeft, ChevronRight, Lock, Unlock, Loader, Car } from 'lucide-react'
+// Fix: dùng carApi thay vì calendarApi (không tồn tại)
 import { carApi } from '@/api/carApi'
-import MainLayout from '@/components/layout/MainLayout'
+import HostLayout from '@/components/layout/HostLayout'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import toast from 'react-hot-toast'
-import HostLayout from '../../components/layout/HostLayout'
 
-const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
+const DAYS   = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
 const MONTHS = [
-  'Tháng 1',
-  'Tháng 2',
-  'Tháng 3',
-  'Tháng 4',
-  'Tháng 5',
-  'Tháng 6',
-  'Tháng 7',
-  'Tháng 8',
-  'Tháng 9',
-  'Tháng 10',
-  'Tháng 11',
-  'Tháng 12',
+  'Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6',
+  'Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12',
 ]
 
+// Trạng thái ngày
+const DAY_STYLE = {
+  AVAILABLE: {
+    bg:    'bg-surface border-border hover:border-teal-300',
+    label: null,
+  },
+  BOOKED: {
+    bg:    'bg-amber-50 border-amber-200 cursor-not-allowed',
+    label: 'Có đơn',
+  },
+  BLOCKED: {
+    bg:    'bg-red-50 border-red-200',
+    label: 'Chặn',
+  },
+}
+
 export default function CarCalendarPage() {
-  const { carId } = useParams()
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const today = new Date()
-  const [year, setYear] = useState(today.getFullYear())
+  const { carId }      = useParams()
+  const navigate       = useNavigate()
+  const queryClient    = useQueryClient()
+  const today          = new Date()
+
+  const [year,  setYear]  = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
-  const [selectedRange, setSelectedRange] = useState({ start: null, end: null })
-  const [blockMode, setBlockMode] = useState(false)
 
+  // Chọn ngày để block/unblock
+  const [selectStart, setSelectStart] = useState(null)
+  const [selectEnd,   setSelectEnd]   = useState(null)
+  const [blockMode,   setBlockMode]   = useState(false)
+
+  // ── Fetch xe ────────────────────────────────────────
   const { data: carRes } = useQuery({
-    queryKey: ['car-detail', carId],
-    queryFn: () => carApi.getMyCarDetail(carId),
+    queryKey: ['my-car', carId],
+    queryFn:  () => carApi.getMyCarDetail(carId),
   })
+  const car = carRes?.data?.data
 
-  const { data: calendarRes, isLoading } = useQuery({
+  // ── Fetch lịch ──────────────────────────────────────
+  const { data: calRes, isLoading } = useQuery({
     queryKey: ['calendar', carId, year, month],
-    queryFn: () => calendarApi.getCalendar(carId, year, month),
+    // Fix: dùng carApi.getCalendar
+    queryFn:  () => carApi.getCalendar(carId, year, month),
   })
 
+  // Fix: backend trả về array thẳng, không có .calendar
+  const calendarDays = calRes?.data?.data || []
+
+  // Map date string → trạng thái để lookup nhanh
+  const dayMap = useMemo(() => {
+    const m = {}
+    calendarDays.forEach((d) => { m[d.date] = d })
+    return m
+  }, [calendarDays])
+
+  // ── Mutations ────────────────────────────────────────
   const blockMutation = useMutation({
     mutationFn: ({ startDate, endDate }) =>
-      calendarApi.blockDates(carId, startDate, endDate),
+      carApi.blockDates(carId, startDate, endDate),
     onSuccess: () => {
       toast.success('Chặn ngày thành công')
       queryClient.invalidateQueries(['calendar', carId, year, month])
-      setSelectedRange({ start: null, end: null })
-      setBlockMode(false)
+      resetSelect()
     },
-    onError: (err) => {
-      toast.error(err.response?.data?.message || 'Chặn ngày thất bại')
-    },
+    onError: (err) =>
+      toast.error(err.response?.data?.message || 'Chặn ngày thất bại'),
   })
 
   const unblockMutation = useMutation({
     mutationFn: ({ startDate, endDate }) =>
-      calendarApi.unblockDates(carId, startDate, endDate),
+      carApi.unblockDates(carId, startDate, endDate),
     onSuccess: () => {
       toast.success('Mở lại ngày thành công')
       queryClient.invalidateQueries(['calendar', carId, year, month])
-      setSelectedRange({ start: null, end: null })
-      setBlockMode(false)
+      resetSelect()
     },
-    onError: (err) => {
-      toast.error(err.response?.data?.message || 'Mở lại ngày thất bại')
-    },
+    onError: (err) =>
+      toast.error(err.response?.data?.message || 'Mở lại ngày thất bại'),
   })
 
-  const calendar = calendarRes?.data?.data?.calendar || []
-
-  const daysInMonth = new Date(year, month, 0).getDate()
-  const firstDayOfMonth = new Date(year, month - 1, 1).getDay()
-  const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1
-
-  const calendarDays = useMemo(() => {
-    return calendar.slice(0, daysInMonth)
-  }, [calendar, daysInMonth])
-
-  const handlePrevMonth = () => {
-    if (month === 1) {
-      setMonth(12)
-      setYear(year - 1)
-    } else {
-      setMonth(month - 1)
-    }
-  }
-
-  const handleNextMonth = () => {
-    if (month === 12) {
-      setMonth(1)
-      setYear(year + 1)
-    } else {
-      setMonth(month + 1)
-    }
-  }
-
-  const handleDateClick = (day) => {
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    const dayData = calendarDays[day - 1]
-
-    if (!blockMode) return
-
-    if (!selectedRange.start) {
-      setSelectedRange({ start: day, end: day })
-    } else if (!selectedRange.end) {
-      const [start, end] = [selectedRange.start, day].sort((a, b) => a - b)
-      setSelectedRange({ start, end })
-    }
-  }
-
-  const handleConfirmBlock = () => {
-    if (!selectedRange.start || !selectedRange.end) {
-      toast.error('Chọn ngày bắt đầu và kết thúc')
-      return
-    }
-
-    const startStr = `${year}-${String(month).padStart(2, '0')}-${String(selectedRange.start).padStart(2, '0')}`
-    const endStr = `${year}-${String(month).padStart(2, '0')}-${String(selectedRange.end).padStart(2, '0')}`
-
-    const dayData = calendarDays[selectedRange.start - 1]
-    if (dayData?.status === 'BLOCKED') {
-      unblockMutation.mutate({ startDate: startStr, endDate: endStr })
-    } else {
-      blockMutation.mutate({ startDate: startStr, endDate: endStr })
-    }
-  }
-
-  const handleReset = () => {
-    setSelectedRange({ start: null, end: null })
+  // ── Helpers ──────────────────────────────────────────
+  const resetSelect = () => {
+    setSelectStart(null)
+    setSelectEnd(null)
     setBlockMode(false)
   }
 
-  const isDateSelected = (day) => {
-    if (!selectedRange.start || !selectedRange.end) return false
-    return day >= selectedRange.start && day <= selectedRange.end
+  const toDateStr = (day) =>
+    `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+
+  const getStatus = (day) => {
+    const key  = toDateStr(day)
+    return dayMap[key]?.status || 'AVAILABLE'
   }
 
-  const getDateStatus = (dayData) => {
-    if (!dayData) return 'EMPTY'
-    return dayData.status
+  const isPast = (day) => {
+    const d = new Date(year, month - 1, day)
+    const t = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    return d < t
   }
 
-  if (isLoading) return <LoadingSpinner />
+  const isInRange = (day) => {
+    if (!selectStart || !selectEnd) return false
+    const [s, e] = selectStart <= selectEnd
+      ? [selectStart, selectEnd]
+      : [selectEnd, selectStart]
+    return day >= s && day <= e
+  }
 
-  const car = carRes?.data?.data
+  // ── Tính offset ngày đầu tháng (T2 = 0) ─────────────
+  const daysInMonth   = new Date(year, month, 0).getDate()
+  const firstWeekday  = new Date(year, month - 1, 1).getDay()
+  const offset        = firstWeekday === 0 ? 6 : firstWeekday - 1
+
+  // ── Điều hướng tháng ─────────────────────────────────
+  const prevMonth = () => {
+    if (month === 1) { setMonth(12); setYear(y => y - 1) }
+    else setMonth(m => m - 1)
+  }
+  const nextMonth = () => {
+    if (month === 12) { setMonth(1); setYear(y => y + 1) }
+    else setMonth(m => m + 1)
+  }
+
+  // ── Click ngày ───────────────────────────────────────
+  const handleDayClick = (day) => {
+    if (!blockMode || isPast(day)) return
+    const status = getStatus(day)
+    if (status === 'BOOKED') {
+      toast.error('Ngày này đã có đơn đặt, không thể thay đổi')
+      return
+    }
+
+    if (!selectStart) {
+      setSelectStart(day)
+      setSelectEnd(day)
+    } else {
+      setSelectEnd(day)
+    }
+  }
+
+  // ── Xác nhận block/unblock ───────────────────────────
+  const handleConfirm = () => {
+    if (!selectStart || !selectEnd) {
+      toast.error('Vui lòng chọn ít nhất 1 ngày')
+      return
+    }
+    const [s, e] = selectStart <= selectEnd
+      ? [selectStart, selectEnd]
+      : [selectEnd, selectStart]
+
+    const startDate = toDateStr(s)
+    const endDate   = toDateStr(e)
+
+    // Kiểm tra trong range có ngày BOOKED không
+    for (let d = s; d <= e; d++) {
+      if (getStatus(d) === 'BOOKED') {
+        toast.error(`Ngày ${d}/${month} đã có đơn đặt trong khoảng này`)
+        return
+      }
+    }
+
+    // Nếu ngày đầu đang BLOCKED → unblock, ngược lại → block
+    const firstStatus = getStatus(s)
+    if (firstStatus === 'BLOCKED') {
+      unblockMutation.mutate({ startDate, endDate })
+    } else {
+      blockMutation.mutate({ startDate, endDate })
+    }
+  }
+
+  const isMutating = blockMutation.isPending || unblockMutation.isPending
+
+  // ── Render ────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <HostLayout>
+        <div className="flex items-center justify-center min-h-64">
+          <LoadingSpinner size="lg" />
+        </div>
+      </HostLayout>
+    )
+  }
 
   return (
     <HostLayout>
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto">
+
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <button
-            onClick={() => navigate('/host/cars')}
-            className="text-teal-600 text-sm font-semibold mb-4 hover:text-teal-800 transition-colors"
+            onClick={() => navigate('/host/calendar')}
+            className="flex items-center gap-1 text-sm text-teal-600 font-semibold
+                       hover:text-teal-800 transition-colors mb-3"
           >
-            ← Quay lại
+            <ChevronLeft className="w-4 h-4" /> Chọn xe khác
           </button>
-          <h1 className="text-3xl font-bold text-primary mb-2">
-            Lịch xe: {car?.fullName}
+          <h1 className="text-2xl font-bold text-primary mb-0.5">
+            {car ? `Lịch: ${car.fullName}` : 'Quản lý lịch xe'}
           </h1>
-          <p className="text-primary-muted">
-            Quản lý lịch và chặn ngày để tránh xung đột đơn đặt
+          <p className="text-sm text-primary-subtle">
+            Xem và chặn ngày theo tháng
           </p>
         </div>
 
         {/* Legend */}
-        <div className="bg-surface border border-border rounded-2xl p-4 mb-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
-              <span className="text-xs text-primary">Trống</span>
+        <div className="flex flex-wrap gap-4 mb-5 bg-surface border border-border
+                        rounded-2xl px-5 py-3">
+          {[
+            { cls: 'bg-surface border border-border',       label: 'Còn trống' },
+            { cls: 'bg-amber-50 border border-amber-200',   label: 'Có đơn đặt' },
+            { cls: 'bg-red-50 border border-red-200',       label: 'Đã chặn' },
+            { cls: 'bg-teal-100 border border-teal-300',    label: 'Đang chọn' },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-2">
+              <div className={`w-4 h-4 rounded ${item.cls}`} />
+              <span className="text-xs text-primary-muted">{item.label}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-amber-100 border border-amber-300 rounded"></div>
-              <span className="text-xs text-primary">Bận</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
-              <span className="text-xs text-primary">Bị chặn</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
-              <span className="text-xs text-primary">Không hợp lệ</span>
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Calendar */}
-        <div className="bg-surface border border-border rounded-2xl p-6 mb-6">
-          {/* Month/Year header */}
-          <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={handlePrevMonth}
-              className="p-2 hover:bg-surface-soft rounded-lg transition-colors"
-            >
+        {/* Calendar card */}
+        <div className="bg-surface border border-border rounded-2xl p-5 mb-5">
+
+          {/* Month nav */}
+          <div className="flex items-center justify-between mb-5">
+            <button onClick={prevMonth}
+              className="w-9 h-9 flex items-center justify-center rounded-xl
+                         hover:bg-surface-soft transition-colors">
               <ChevronLeft className="w-5 h-5 text-primary" />
             </button>
-
-            <h2 className="text-xl font-bold text-primary">
+            <h2 className="text-lg font-bold text-primary">
               {MONTHS[month - 1]} {year}
             </h2>
-
-            <button
-              onClick={handleNextMonth}
-              className="p-2 hover:bg-surface-soft rounded-lg transition-colors"
-            >
+            <button onClick={nextMonth}
+              className="w-9 h-9 flex items-center justify-center rounded-xl
+                         hover:bg-surface-soft transition-colors">
               <ChevronRight className="w-5 h-5 text-primary" />
             </button>
           </div>
 
-          {/* Days header */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {DAYS.map((day) => (
-              <div key={day} className="text-center text-xs font-bold text-primary-muted py-2">
-                {day}
+          {/* Weekday headers */}
+          <div className="grid grid-cols-7 mb-2">
+            {DAYS.map((d) => (
+              <div key={d} className="text-center text-xs font-bold text-primary-subtle py-1">
+                {d}
               </div>
             ))}
           </div>
 
-          {/* Calendar grid */}
+          {/* Day cells */}
           <div className="grid grid-cols-7 gap-1">
-            {/* Empty cells */}
-            {Array(adjustedFirstDay)
-              .fill(null)
-              .map((_, i) => (
-                <div key={`empty-${i}`} className="aspect-square"></div>
-              ))}
+            {/* Offset cells */}
+            {Array.from({ length: offset }).map((_, i) => (
+              <div key={`e${i}`} />
+            ))}
 
-            {/* Date cells */}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1
-              const dayData = calendarDays[i]
-              const status = getDateStatus(dayData)
-              const isSelected = isDateSelected(day)
-              const isStart = selectedRange.start === day
-              const isEnd = selectedRange.end === day
+            {/* Day cells */}
+            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+              const status   = getStatus(day)
+              const past     = isPast(day)
+              const inRange  = isInRange(day)
+              const isStart  = selectStart === day
+              const isEnd    = selectEnd   === day
+              const style    = DAY_STYLE[status] || DAY_STYLE.AVAILABLE
 
-              let bgColor = 'bg-green-50 border-green-200'
-              if (status === 'BOOKED') bgColor = 'bg-amber-50 border-amber-200'
-              else if (status === 'BLOCKED') bgColor = 'bg-red-50 border-red-200'
-              else if (status === 'INVALID') bgColor = 'bg-gray-100 border-gray-200'
-
-              if (isSelected) bgColor = 'bg-teal-200 border-teal-400'
+              let cellCls = style.bg
+              if (inRange && blockMode)  cellCls = 'bg-teal-100 border-teal-300'
+              if (past)                  cellCls += ' opacity-40'
+              if (status === 'BOOKED')   cellCls += ' cursor-not-allowed'
+              if (blockMode && !past && status !== 'BOOKED') cellCls += ' cursor-pointer'
 
               return (
                 <button
                   key={day}
-                  onClick={() => handleDateClick(day)}
-                  disabled={!blockMode || status === 'INVALID'}
-                  className={`aspect-square rounded-lg border p-1 text-xs font-semibold
-                             transition-all flex items-center justify-center relative
-                             ${bgColor} ${!blockMode || status === 'INVALID' ? 'cursor-default' : 'cursor-pointer hover:shadow-card'}
-                             ${isStart ? 'ring-2 ring-teal-600' : ''}
-                             ${isEnd ? 'ring-2 ring-teal-600' : ''}
-                             ${status === 'INVALID' ? 'opacity-50' : ''}
-                             `}
+                  onClick={() => handleDayClick(day)}
+                  disabled={!blockMode || past || status === 'BOOKED'}
+                  className={`relative aspect-square rounded-xl border text-xs font-semibold
+                               flex flex-col items-center justify-center gap-0.5
+                               transition-all duration-100 ${cellCls}
+                               ${isStart || isEnd ? 'ring-2 ring-teal-500 ring-offset-1' : ''}`}
                 >
-                  {day}
+                  <span>{day}</span>
+                  {style.label && (
+                    <span className="text-[9px] font-medium opacity-70 leading-none">
+                      {style.label}
+                    </span>
+                  )}
                 </button>
               )
             })}
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="space-y-4">
+        {/* Action panel */}
+        <div className="bg-surface border border-border rounded-2xl p-5">
           {!blockMode ? (
-            <button
-              onClick={() => setBlockMode(true)}
-              className="w-full bg-primary text-white px-4 py-3 rounded-xl text-sm
-                         font-semibold flex items-center justify-center gap-2
-                         hover:bg-primary-soft transition-colors"
-            >
-              <Lock className="w-4 h-4" />
-              Chế độ chặn ngày
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setBlockMode(true)}
+                className="flex-1 btn-primary flex items-center justify-center gap-2 py-3"
+              >
+                <Lock className="w-4 h-4" />
+                Chặn ngày
+              </button>
+              <button
+                onClick={() => setBlockMode(true)}
+                className="flex-1 btn-secondary flex items-center justify-center gap-2 py-3"
+              >
+                <Unlock className="w-4 h-4" />
+                Mở ngày đã chặn
+              </button>
+            </div>
           ) : (
-            <div className="space-y-3">
-              {selectedRange.start && selectedRange.end && (
-                <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
-                  <p className="text-sm font-medium text-teal-900 mb-2">
-                    Chọn: Từ ngày {selectedRange.start} đến ngày {selectedRange.end}
-                  </p>
-                  <p className="text-xs text-teal-700">
-                    {Math.abs(selectedRange.end - selectedRange.start) + 1} ngày
-                  </p>
+            <div className="space-y-4">
+              {/* Hướng dẫn */}
+              <div className="bg-teal-50 border border-teal-100 rounded-xl px-4 py-3">
+                <p className="text-sm font-semibold text-teal-800 mb-0.5">
+                  Chế độ chọn ngày đang bật
+                </p>
+                <p className="text-xs text-teal-600">
+                  {!selectStart
+                    ? 'Nhấn vào ngày bắt đầu'
+                    : !selectEnd || selectEnd === selectStart
+                      ? 'Nhấn ngày kết thúc (hoặc xác nhận 1 ngày)'
+                      : `Đã chọn: ${Math.abs(selectEnd - selectStart) + 1} ngày`
+                  }
+                </p>
+              </div>
+
+              {/* Preview khoảng ngày */}
+              {selectStart && (
+                <div className="flex items-center gap-2 text-sm text-primary-muted">
+                  <span className="font-semibold text-primary">
+                    {String(selectStart).padStart(2,'0')}/{String(month).padStart(2,'0')}/{year}
+                  </span>
+                  {selectEnd && selectEnd !== selectStart && (
+                    <>
+                      <span>→</span>
+                      <span className="font-semibold text-primary">
+                        {String(selectEnd).padStart(2,'0')}/{String(month).padStart(2,'0')}/{year}
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <button
-                  onClick={handleConfirmBlock}
-                  disabled={
-                    !selectedRange.start ||
-                    !selectedRange.end ||
-                    blockMutation.isPending ||
-                    unblockMutation.isPending
-                  }
-                  className="flex-1 bg-red-600 text-white px-4 py-3 rounded-xl text-sm
-                             font-semibold hover:bg-red-700 transition-colors disabled:opacity-50
-                             flex items-center justify-center gap-2"
+                  onClick={handleConfirm}
+                  disabled={!selectStart || isMutating}
+                  className="flex-1 btn-primary flex items-center justify-center gap-2 py-3
+                             disabled:opacity-50"
                 >
-                  {blockMutation.isPending || unblockMutation.isPending ? (
-                    <>
-                      <Loader className="w-4 h-4 animate-spin" />
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-4 h-4" />
-                      Xác nhận
-                    </>
-                  )}
+                  {isMutating
+                    ? <><Loader className="w-4 h-4 animate-spin" />Đang xử lý...</>
+                    : <><Lock className="w-4 h-4" />Xác nhận</>
+                  }
                 </button>
-
                 <button
-                  onClick={handleReset}
-                  className="flex-1 bg-surface-soft border border-border text-primary px-4 py-3
-                             rounded-xl text-sm font-semibold hover:bg-surface-muted transition-colors"
+                  onClick={resetSelect}
+                  className="flex-1 btn-secondary py-3"
                 >
                   Hủy
                 </button>
@@ -332,16 +383,16 @@ export default function CarCalendarPage() {
           )}
         </div>
 
-        {/* Info */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-2xl p-4">
-          <h3 className="font-semibold text-blue-900 text-sm mb-2">Lưu ý:</h3>
-          <ul className="text-xs text-blue-700 space-y-1">
-            <li>• Ngày trống (xanh): Có thể đặt xe</li>
-            <li>• Ngày bận (vàng): Đã có đơn đặt</li>
-            <li>• Ngày bị chặn (đỏ): Bạn đã chặn hoặc xe bảo dưỡng</li>
-            <li>• Chọn 2 ngày để chặn hoặc mở khóa khoảng thời gian</li>
+        {/* Info box */}
+        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-2xl p-4">
+          <p className="text-xs font-semibold text-blue-800 mb-2">Lưu ý quan trọng</p>
+          <ul className="text-xs text-blue-700 space-y-1 leading-relaxed">
+            <li>• Ngày <strong>có đơn đặt</strong> (màu vàng) không thể chặn thủ công</li>
+            <li>• Chọn ngày đang <strong>bị chặn</strong> rồi xác nhận để mở lại</li>
+            <li>• Ngày bị chặn sẽ không hiển thị với khách hàng khi tìm kiếm</li>
           </ul>
         </div>
+
       </div>
     </HostLayout>
   )
