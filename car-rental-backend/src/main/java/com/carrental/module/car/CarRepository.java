@@ -25,8 +25,6 @@ public interface CarRepository extends JpaRepository<Car, Long> {
 
     List<Car> findByHostOrderByCreatedAtDesc(User host);
 
-    // Tìm xe available trong khoảng ngày cho trước
-    // Loại xe đang có lịch BLOCKED hoặc BOOKED trong khoảng ngày đó
     @Query("""
         SELECT c FROM Car c
         WHERE c.status = 'APPROVED'
@@ -51,12 +49,30 @@ public interface CarRepository extends JpaRepository<Car, Long> {
             @Param("seats")        Integer seats,
             @Param("transmission") Transmission transmission,
             @Param("fuelType")     FuelType fuelType,
-            Pageable pageable
-    );
+            Pageable pageable);
 
-    // Xe nổi bật cho homepage (approved, rating cao nhất)
     @Query("SELECT c FROM Car c WHERE c.status = 'APPROVED' ORDER BY c.avgRating DESC, c.totalReviews DESC")
     List<Car> findFeaturedCars(Pageable pageable);
 
     long countByStatus(CarStatus status);
+
+    // ── Admin queries ────────────────────────────────────
+
+    // Danh sách xe chờ duyệt, mới nhất trước
+    Page<Car> findByStatusOrderByCreatedAtAsc(CarStatus status, Pageable pageable);
+
+    // Admin filter xe theo status
+    @Query("""
+        SELECT c FROM Car c
+        WHERE (:status IS NULL OR c.status = :status)
+        AND (:keyword IS NULL OR
+             LOWER(c.brand) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+             LOWER(c.model) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+             LOWER(c.licensePlate) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        ORDER BY c.createdAt DESC
+        """)
+    Page<Car> findAllWithFilter(
+            @Param("status")  CarStatus status,
+            @Param("keyword") String keyword,
+            Pageable pageable);
 }
