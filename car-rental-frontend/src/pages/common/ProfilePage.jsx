@@ -446,9 +446,15 @@ export default function ProfilePage() {
                       ? <><Loader className="w-4 h-4 animate-spin" />Đang lưu...</>
                       : 'Đổi mật khẩu'}
                   </button>
-                  <button type="button" onClick={() => resetPassword()}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetPassword()
+                      navigate(-1)
+                    }}
                     className="flex-1 bg-surface-soft border border-border text-primary px-6 py-3
-                               rounded-xl text-sm font-semibold hover:bg-surface-muted transition-colors">
+                              rounded-xl text-sm font-semibold hover:bg-surface-muted transition-colors"
+                  >
                     Hủy
                   </button>
                 </div>
