@@ -20,17 +20,22 @@ import MyCarsPage           from '@/pages/host/MyCarsPage'
 import CalendarSelectPage   from '@/pages/host/CalendarSelectPage'
 import CarCalendarPage      from '@/pages/host/CarCalendarPage'
 
+import AdminDashboardPage from '@/pages/admin/AdminDashboardPage'
+import AdminCarsPage      from '@/pages/admin/AdminCarsPage'
+import AdminUsersPage     from '@/pages/admin/AdminUsersPage'
+import AdminBookingsPage  from '@/pages/admin/AdminBookingsPage'
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, staleTime: 1000 * 60 * 5 },
   },
 })
 
-const AdminPage = () => (
-  <div className="p-8 text-center">
-    <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-  </div>
-)
+// const AdminPage = () => (
+//   <div className="p-8 text-center">
+//     <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+//   </div>
+// )
 
 export default function App() {
   return (
@@ -74,8 +79,17 @@ export default function App() {
             <ProtectedRoute roles={['HOST']}><CarCalendarPage /></ProtectedRoute>
           } />
 
-          <Route path="/admin/*" element={
-            <ProtectedRoute roles={['ADMIN']}><AdminPage /></ProtectedRoute>
+          <Route path="/admin" element={
+            <ProtectedRoute roles={['ADMIN']}><AdminDashboardPage /></ProtectedRoute>
+          } />
+          <Route path="/admin/cars" element={
+            <ProtectedRoute roles={['ADMIN']}><AdminCarsPage /></ProtectedRoute>
+          } />
+          <Route path="/admin/users" element={
+            <ProtectedRoute roles={['ADMIN']}><AdminUsersPage /></ProtectedRoute>
+          } />
+          <Route path="/admin/bookings" element={
+            <ProtectedRoute roles={['ADMIN']}><AdminBookingsPage /></ProtectedRoute>
           } />
 
           <Route path="*" element={<Navigate to="/" replace />} />
