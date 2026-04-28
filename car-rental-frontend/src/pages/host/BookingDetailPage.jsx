@@ -28,6 +28,17 @@ export default function BookingDetailPage() {
     queryFn: () => bookingApi.getDetail(id),
   })
 
+  const startMutation = useMutation({
+    mutationFn: () => bookingApi.start(id),
+    onSuccess: () => {
+      toast.success('Xác nhận giao xe thành công')
+      queryClient.invalidateQueries(['booking', id])
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Xác nhận giao xe thất bại')
+    },
+  })
+
   const confirmMutation = useMutation({
     mutationFn: () => bookingApi.confirm(id),
     onSuccess: () => {
@@ -252,26 +263,36 @@ export default function BookingDetailPage() {
               )}
 
               {booking.status === 'CONFIRMED' && (
-                <button
-                  onClick={() => completeMutation.mutate()}
-                  disabled={completeMutation.isPending}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3
-                             bg-teal-600 text-white rounded-xl text-sm font-semibold
-                             hover:bg-teal-700 transition-colors disabled:opacity-50"
-                >
-                  {completeMutation.isPending ? (
-                    <>
-                      <Loader className="w-4 h-4 animate-spin" />
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Xác nhận trả xe
-                    </>
-                  )}
-                </button>
-              )}
+              <button
+                onClick={() => startMutation.mutate()}
+                disabled={startMutation.isPending}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3
+                          bg-blue-600 text-white rounded-xl text-sm font-semibold
+                          hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {startMutation.isPending ? (
+                  <><Loader className="w-4 h-4 animate-spin" /> Đang xử lý...</>
+                ) : (
+                  <><Check className="w-4 h-4" /> Xác nhận giao xe</>
+                )}
+              </button>
+            )}
+
+            {booking.status === 'IN_PROGRESS' && (
+  <button
+    onClick={() => completeMutation.mutate()}
+    disabled={completeMutation.isPending}
+    className="w-full flex items-center justify-center gap-2 px-4 py-3
+               bg-teal-600 text-white rounded-xl text-sm font-semibold
+               hover:bg-teal-700 transition-colors disabled:opacity-50"
+  >
+    {completeMutation.isPending ? (
+      <><Loader className="w-4 h-4 animate-spin" /> Đang xử lý...</>
+    ) : (
+      <><Check className="w-4 h-4" /> Xác nhận trả xe</>
+    )}
+  </button>
+)}
 
               {booking.status === 'COMPLETED' && (
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">

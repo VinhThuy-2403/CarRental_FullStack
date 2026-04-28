@@ -35,6 +35,17 @@ export default function IncomingBookingsPage() {
       }),
   })
 
+  const startMutation = useMutation({
+    mutationFn: (bookingId) => bookingApi.start(bookingId),
+    onSuccess: () => {
+      toast.success('Xác nhận giao xe thành công')
+      queryClient.invalidateQueries(['incoming-bookings'])
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Xác nhận giao xe thất bại')
+    },
+  })
+
   const confirmMutation = useMutation({
     mutationFn: (bookingId) => bookingApi.confirm(bookingId),
     onSuccess: () => {
@@ -246,19 +257,29 @@ export default function IncomingBookingsPage() {
                     )}
 
                     {booking.status === 'CONFIRMED' && (
-                      <button
-                        onClick={() =>
-                          completeMutation.mutate(booking.id)
-                        }
-                        disabled={completeMutation.isPending}
-                        className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white
-                                   rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors
-                                   disabled:opacity-50"
-                      >
-                        <Check className="w-4 h-4" />
-                        Xác nhận trả xe
-                      </button>
-                    )}
+                    <button
+                      onClick={() => startMutation.mutate(booking.id)}
+                      disabled={startMutation.isPending}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white
+                                rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors
+                                disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4" />
+                      Xác nhận giao xe
+                    </button>
+                  )}
+                  {booking.status === 'IN_PROGRESS' && (
+                    <button
+                      onClick={() => completeMutation.mutate(booking.id)}
+                      disabled={completeMutation.isPending}
+                      className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white
+                                rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors
+                                disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4" />
+                      Xác nhận trả xe
+                    </button>
+                  )}
                   </div>
                 </div>
               </div>

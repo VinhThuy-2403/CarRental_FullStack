@@ -58,13 +58,15 @@ public class BookingController {
 
     // ─── Host endpoints ──────────────────────────────────
 
-    @GetMapping("/host/incoming")
-    @PreAuthorize("hasRole('HOST')")
-    public ResponseEntity<ApiResponse<List<BookingSummary>>> getIncomingBookings(
-            @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(ApiResponse.ok(
-                bookingService.getIncomingBookings(user)));
-    }
+    // --- Tìm hàm getIncomingBookings và sửa lại như sau ---
+@GetMapping("/host/incoming")
+@PreAuthorize("hasRole('HOST')")
+public ResponseEntity<ApiResponse<List<BookingSummary>>> getIncomingBookings(
+        @AuthenticationPrincipal User user,
+        @RequestParam(required = false) com.carrental.common.enums.BookingStatus status) { // Thêm @RequestParam status
+    return ResponseEntity.ok(ApiResponse.ok(
+            bookingService.getIncomingBookings(user, status))); // Truyền status vào service
+}
 
     @PatchMapping("/{id}/confirm")
     @PreAuthorize("hasRole('HOST')")
@@ -104,4 +106,11 @@ public class BookingController {
         return ResponseEntity.ok(ApiResponse.ok(
                 bookingService.getBookingDetail(id, user)));
     }
+
+    @PatchMapping("/{id}/start")
+@PreAuthorize("hasRole('HOST')")
+public ResponseEntity<ApiResponse<Void>> startBooking(@PathVariable Long id, @AuthenticationPrincipal User host) {
+    bookingService.startBooking(id, host);
+    return ResponseEntity.ok(ApiResponse.ok(null, "Đã xác nhận giao xe. Chuyến đi bắt đầu!"));
+}
 }

@@ -201,20 +201,33 @@ public class BookingService {
         log.info("Customer {} cancelled booking {}", customer.getEmail(), bookingId);
     }
 
+    @Transactional
+    public void startBooking(Long bookingId, User host) {
+        Booking booking = getBookingAndVerifyHost(bookingId, host);
+        
+        // Chỉ đơn đã CONFIRMED mới được bắt đầu (giao xe)
+        if (booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw AppException.badRequest("Đơn hàng phải ở trạng thái Đã xác nhận mới có thể giao xe.");
+        }
+
+        booking.setStatus(BookingStatus.IN_PROGRESS);
+        bookingRepository.save(booking);
+        log.info("Booking {} started (IN_PROGRESS) by host {}", bookingId, host.getEmail());
+    }
+
     // ─── Host: Xác nhận trả xe (COMPLETED) ──────────────
 
     @Transactional
     public void completeBooking(Long bookingId, User host) {
         Booking booking = getBookingAndVerifyHost(bookingId, host);
 
-        if (booking.getStatus() != BookingStatus.IN_PROGRESS &&
-            booking.getStatus() != BookingStatus.CONFIRMED) {
-            throw AppException.badRequest("Không thể hoàn thành đơn ở trạng thái hiện tại");
+        // Chỉ đơn đang IN_PROGRESS mới được hoàn thành (trả xe)
+        if (booking.getStatus() != BookingStatus.IN_PROGRESS) {
+            throw AppException.badRequest("Chỉ có thể hoàn thành đơn khi xe đang trong quá trình thuê (IN_PROGRESS).");
         }
 
         booking.setStatus(BookingStatus.COMPLETED);
         bookingRepository.save(booking);
-
         log.info("Booking {} completed by host {}", bookingId, host.getEmail());
     }
 
@@ -228,12 +241,25 @@ public class BookingService {
 
     // ─── Host: Xem đơn chờ xác nhận ─────────────────────
 
-    public List<BookingSummary> getIncomingBookings(User host) {
-        return bookingRepository.findByHostAndStatusIn(
-                host,
-                List.of(BookingStatus.PENDING_CONFIRM, BookingStatus.CONFIRMED)
-        ).stream().map(this::toSummary).toList();
+    // --- Sửa lại hàm getIncomingBookings ---
+public List<BookingSummary> getIncomingBookings(User host, BookingStatus status) {
+    // 1. Nếu người dùng chọn một Tab cụ thể (status != null)
+    if (status != null) {
+        return bookingRepository.findByHostAndStatusIn(host, List.of(status))
+                .stream().map(this::toSummary).toList();
     }
+    
+    // 2. Nếu người dùng chọn Tab "Tất cả" (status == null)
+    // Lấy tất cả các đơn hàng mà Host cần xử lý/theo dõi
+    return bookingRepository.findByHostAndStatusIn(
+            host,
+            List.of(
+                BookingStatus.PENDING_CONFIRM, 
+                BookingStatus.CONFIRMED, 
+                BookingStatus.IN_PROGRESS
+            )
+    ).stream().map(this::toSummary).toList();
+}
 
     // ─── Xem chi tiết đơn ───────────────────────────────
 

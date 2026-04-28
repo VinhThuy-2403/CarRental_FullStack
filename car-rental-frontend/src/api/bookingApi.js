@@ -26,4 +26,7 @@ export const bookingApi = {
 
   complete: (id) =>
     api.patch(`/bookings/${id}/complete`, {}),
+
+  start: (id) =>
+    api.patch(`/bookings/${id}/start`, {}),
 }
