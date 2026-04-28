@@ -43,19 +43,23 @@ public class BookingDtos {
 
     // ─── Response: Tóm tắt đơn ──────────────────────────
     @Data
-    public static class BookingSummary {
-        private Long id;
-        private String carName;
-        private String carImageUrl;
-        private String province;
-        private LocalDate startDate;
-        private LocalDate endDate;
-        private Integer totalDays;
-        private BigDecimal totalPrice;
-        private BookingStatus status;
-        private PaymentMethod paymentMethod;
-        private LocalDateTime createdAt;
-    }
+public static class BookingSummary {
+    private Long id;
+    private String carName;
+    private String carImageUrl;
+    private String province;
+    private String pickupLocation; // THÊM DÒNG NÀY (Để chứa địa chỉ chi tiết)
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private Integer totalDays;
+    private BigDecimal totalPrice;
+    private BookingStatus status;
+    private PaymentMethod paymentMethod;
+    private LocalDateTime createdAt;
+    private String customerName;
+    private String customerAvatar;
+    private String customerPhone;
+}
 
     // ─── Response: Chi tiết đơn ──────────────────────────
     @Data

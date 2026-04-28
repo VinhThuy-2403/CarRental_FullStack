@@ -81,6 +81,13 @@ public class BookingService {
                 .multiply(BigDecimal.valueOf(totalDays))
                 .add(car.getDeposit());
 
+      
+
+        BookingStatus initialStatus = (req.getPaymentMethod() == PaymentMethod.CASH) 
+                ? BookingStatus.PENDING_CONFIRM 
+                : BookingStatus.PENDING_PAYMENT;
+
+   
         Booking booking = Booking.builder()
                 .customer(customer)
                 .car(car)
@@ -94,8 +101,13 @@ public class BookingService {
                 .driverIdCard(req.getDriverIdCard())
                 .driverPhone(req.getDriverPhone())
                 .paymentMethod(req.getPaymentMethod())
-                .status(BookingStatus.PENDING_PAYMENT)
+                .status(initialStatus) 
                 .build();
+
+        
+        if (initialStatus == BookingStatus.PENDING_CONFIRM) {
+            booking.setConfirmDeadline(LocalDateTime.now().plusHours(2));
+        }
 
         return bookingRepository.save(booking);
     }
@@ -303,6 +315,17 @@ public class BookingService {
         s.setStatus(b.getStatus());
         s.setPaymentMethod(b.getPaymentMethod());
         s.setCreatedAt(b.getCreatedAt());
+
+        // Lấy toàn bộ thông tin của KHÁCH HÀNG (bao gồm cả địa chỉ)
+        if (b.getCustomer() != null) {
+            s.setCustomerName(b.getCustomer().getFullName());
+            s.setCustomerAvatar(b.getCustomer().getAvatarUrl());
+            s.setCustomerPhone(b.getCustomer().getPhone());
+            
+            // Gán địa chỉ của khách hàng vào biến pickupLocation
+            s.setPickupLocation(b.getCustomer().getAddress()); 
+        }
+
         return s;
     }
 
