@@ -240,10 +240,12 @@ export default function BookingDetailPage() {
   const booking = res?.data?.data
 
   // ── Fetch payment info ────────────────────────────────
+  // ── Fetch payment info ────────────────────────────────
   const { data: payRes } = useQuery({
     queryKey: ['payment', id],
     queryFn:  () => paymentApi.getByBooking(id),
-    enabled:  !!id && booking?.status !== 'PENDING_PAYMENT',
+    // Chỉ fetch payment nếu không phải đang chờ thanh toán, VÀ không phải là thanh toán tiền mặt
+    enabled:  !!id && booking?.status !== 'PENDING_PAYMENT' && booking?.paymentMethod !== 'CASH',
   })
   const payment = payRes?.data?.data
 
