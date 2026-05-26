@@ -6,6 +6,7 @@ import { carApi } from '@/api/carApi'
 import MainLayout from '@/components/layout/MainLayout'
 import { PageLoader } from '@/components/common/LoadingSpinner'
 import useAuthStore from '@/store/authStore'
+import { reviewApi } from '@/api/reviewApi'
 
 const FUEL_LABEL = { GASOLINE:'Xăng', DIESEL:'Dầu', ELECTRIC:'Điện', HYBRID:'Hybrid' }
 const TRANS_LABEL = { AUTOMATIC:'Số tự động', MANUAL:'Số sàn' }
@@ -17,6 +18,12 @@ export default function CarDetailPage() {
   const { isLoggedIn } = useAuthStore()
   const [imgIdx, setImgIdx]    = useState(0)
   const [calDate, setCalDate]  = useState(new Date())
+
+  const { data: reviewRes } = useQuery({
+    queryKey: ['car-reviews', id],
+    queryFn: () => reviewApi.getByCar(id, { page: 0, size: 5 }),
+  })
+  const reviews = reviewRes?.data?.data?.content || []
 
   const { data: carRes, isLoading } = useQuery({
     queryKey: ['car', id],
@@ -241,6 +248,55 @@ export default function CarDetailPage() {
           </div>
         </div>
       </div>
+      
+      {/* Reviews */}
+      <div className="mb-6">
+        <h2 className="text-base font-bold text-primary mb-4 flex items-center gap-2">
+          Đánh giá từ khách hàng ({car.totalReviews || 0})
+        </h2>
+        
+        {reviews.length > 0 ? (
+          <div className="space-y-4">
+            {reviews.map((rv) => (
+              <div key={rv.id} className="bg-surface border border-border rounded-2xl p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  {rv.customerAvatar ? (
+                    <img src={rv.customerAvatar} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
+                      {rv.customerName.charAt(0)}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-semibold text-primary text-sm">{rv.customerName}</p>
+                    <div className="flex items-center gap-1 text-xs text-primary-subtle">
+                      <div className="flex gap-0.5">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className={`w-3 h-3 ${i < rv.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
+                        ))}
+                      </div>
+                      <span>· {new Date(rv.createdAt).toLocaleDateString('vi-VN')}</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-primary-muted">{rv.comment}</p>
+                
+                {rv.hostReply && (
+                  <div className="mt-3 bg-surface-soft p-3 rounded-xl border border-border ml-6">
+                    <p className="text-xs font-bold text-primary mb-1">Phản hồi từ Chủ xe</p>
+                    <p className="text-xs text-primary-muted">{rv.hostReply}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-surface-soft border border-border rounded-2xl p-6 text-center">
+            <p className="text-sm text-primary-subtle">Chưa có đánh giá nào cho xe này.</p>
+          </div>
+        )}
+      </div>
+
 
       {/* Sticky bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-md

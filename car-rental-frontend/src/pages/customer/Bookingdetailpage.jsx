@@ -13,6 +13,8 @@ import MainLayout from '@/components/layout/MainLayout'
 import { PageLoader } from '@/components/common/LoadingSpinner'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import useAuthStore from '@/store/authStore'
+import { Star } from 'lucide-react'
+import { reviewApi } from '@/api/reviewApi'
 
 // ─── Config ───────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -65,6 +67,7 @@ const PAYMENT_LABEL = {
   MOMO:  { label: 'MoMo',  icon: <Wallet    className="w-4 h-4" />, cls: 'text-pink-600 bg-pink-50' },
   CASH:  { label: 'Tiền mặt', icon: <Banknote className="w-4 h-4" />, cls: 'text-teal-600 bg-teal-50' },
 }
+
 
 // Tính chính sách hoàn tiền
 function getRefundPolicy(startDate) {
@@ -232,6 +235,23 @@ export default function BookingDetailPage() {
   const [showCancel, setShowCancel] = useState(false)
   const [repaying,   setRepaying]   = useState(false)
 
+  const [showReview, setShowReview] = useState(false)
+  const [rating, setRating] = useState(5)
+  const [comment, setComment] = useState('')
+
+  const reviewMutation = useMutation({
+    mutationFn: () => reviewApi.create({ bookingId: id, rating, comment }),
+    onSuccess: () => {
+      toast.success('Đánh giá thành công!')
+      setShowReview(false)
+      queryClient.invalidateQueries(['booking', id])
+      
+      // 👇 Thêm dòng này để tự động chuyển hướng về trang chủ 👇
+      navigate('/') 
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Đánh giá thất bại')
+  })
+
   // ── Fetch booking ─────────────────────────────────────
   const { data: res, isLoading } = useQuery({
     queryKey: ['booking', id],
@@ -295,6 +315,8 @@ export default function BookingDetailPage() {
   const pmCfg       = PAYMENT_LABEL[booking.paymentMethod]
   const canCancel   = isCustomer && ['PENDING_PAYMENT', 'PENDING_CONFIRM', 'CONFIRMED'].includes(booking.status)
   const needRepay   = booking.status === 'PENDING_PAYMENT' && booking.paymentMethod !== 'CASH'
+
+  
 
   return (
     <MainLayout>
@@ -539,9 +561,9 @@ export default function BookingDetailPage() {
           )}
 
           {/* Đánh giá (sau khi hoàn thành) */}
-          {booking.status === 'COMPLETED' && isCustomer && (
+          {booking.status === 'COMPLETED' && isCustomer && !booking.isReviewed && (
             <button
-              onClick={() => navigate(`/bookings/${id}/review`)}
+              onClick={() => setShowReview(true)}
               className="flex-1 btn-primary py-3 flex items-center justify-center gap-2"
             >
               ⭐ Đánh giá chuyến đi
@@ -560,6 +582,53 @@ export default function BookingDetailPage() {
           onClose={() => setShowCancel(false)}
         />
       )}
+
+      {/* Modal Đánh giá */}
+      {showReview && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-surface rounded-2xl shadow-modal w-full max-w-md animate-slide-up p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-primary text-lg">Đánh giá xe</h3>
+              <button onClick={() => setShowReview(false)}><X className="w-5 h-5 text-primary-muted" /></button>
+            </div>
+            
+            <div className="flex justify-center gap-2 mb-6">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button 
+                  key={star} 
+                  onClick={() => setRating(star)}
+                  className="transition-transform hover:scale-110"
+                >
+                  <Star className={`w-8 h-8 ${star <= rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-6">
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Chia sẻ trải nghiệm của bạn về chiếc xe này (tối đa 500 ký tự)..."
+                rows={4}
+                maxLength={500}
+                className="w-full bg-surface-soft border border-border rounded-xl px-4 py-3
+                          text-sm focus:outline-none focus:ring-2 focus:ring-teal-400/25
+                          focus:border-teal-400 resize-none"
+              />
+            </div>
+
+            <button
+              onClick={() => reviewMutation.mutate()}
+              disabled={reviewMutation.isPending}
+              className="w-full btn-primary py-3 flex items-center justify-center"
+            >
+              {reviewMutation.isPending ? <LoadingSpinner size="sm" /> : 'Gửi đánh giá'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      
     </MainLayout>
   )
 }
