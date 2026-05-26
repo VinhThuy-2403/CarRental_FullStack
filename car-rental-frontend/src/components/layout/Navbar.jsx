@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router-dom'
 import { Menu, X, Bell, ChevronDown, User, LogOut, Car, LayoutDashboard } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import clsx from 'clsx'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { notificationApi } from '@/api/notificationApi'
 
 export default function Navbar() {
   const { user, isLoggedIn, isHost, isAdmin, logout } = useAuth()
@@ -11,6 +13,35 @@ export default function Navbar() {
   const location = useLocation()
 
   const isActive = (path) => location.pathname === path
+
+  const [notiOpen, setNotiOpen] = useState(false)
+  const queryClient = useQueryClient()
+
+  // Fetch unread count (chỉ khi đã đăng nhập)
+  const { data: countRes } = useQuery({
+    queryKey: ['noti-count'],
+    queryFn: notificationApi.getUnreadCount,
+    enabled: isLoggedIn,
+    refetchInterval: 30000 // Tự động refetch mỗi 30s
+  })
+  const unreadCount = countRes?.data?.data || 0
+
+  // Fetch danh sách thông báo khi bấm mở menu
+  const { data: notiRes } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => notificationApi.getMine({ page: 0, size: 10 }),
+    enabled: notiOpen && isLoggedIn
+  })
+  const notifications = notiRes?.data?.data?.content || []
+
+  // Mark as read
+  const readMutation = useMutation({
+    mutationFn: (id) => notificationApi.markAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['noti-count'])
+      queryClient.invalidateQueries(['notifications'])
+    }
+  })
 
   return (
     <nav className="sticky top-0 z-50 bg-surface/90 backdrop-blur-md border-b border-border">
@@ -69,9 +100,66 @@ export default function Navbar() {
           {isLoggedIn ? (
             <>
               {/* Notification bell */}
-              <button className="relative p-2 rounded-lg hover:bg-surface-soft transition-colors">
-                <Bell className="w-5 h-5 text-primary-muted" />
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => { setNotiOpen(!notiOpen); setDropdown(false); }}
+                  className="relative p-2 rounded-lg hover:bg-surface-soft transition-colors"
+                >
+                  <Bell className="w-5 h-5 text-primary-muted" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center 
+                                    rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-surface">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification Dropdown */}
+                {notiOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setNotiOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-80 bg-surface border border-border
+                                    rounded-xl shadow-modal z-20 overflow-hidden animate-fade-in">
+                      <div className="px-4 py-3 border-b border-border flex justify-between items-center bg-surface-soft">
+                        <h3 className="text-sm font-bold text-primary">Thông báo</h3>
+                        <button className="text-xs text-teal-600 font-medium hover:underline">
+                          Đánh dấu đã đọc
+                        </button>
+                      </div>
+                      
+                      <div className="max-h-96 overflow-y-auto">
+                        {notifications.length > 0 ? (
+                          notifications.map((noti) => (
+                            <div 
+                              key={noti.id} 
+                              onClick={() => {
+                                if (!noti.isRead) readMutation.mutate(noti.id)
+                                setNotiOpen(false)
+                                // Tùy vào loại thông báo để navigate, ví dụ:
+                                // if(noti.referenceId) navigate(`/bookings/${noti.referenceId}`)
+                              }}
+                              className={`p-4 border-b border-border hover:bg-surface-soft cursor-pointer transition-colors
+                                          ${!noti.isRead ? 'bg-teal-50/30' : ''}`}
+                            >
+                              <p className={`text-sm mb-1 ${!noti.isRead ? 'font-bold text-primary' : 'font-medium text-primary-muted'}`}>
+                                {noti.title}
+                              </p>
+                              <p className="text-xs text-primary-subtle line-clamp-2">{noti.message}</p>
+                              <p className="text-[10px] text-primary-subtle mt-2">
+                                {new Date(noti.createdAt).toLocaleString('vi-VN')}
+                              </p>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-6 text-center text-sm text-primary-subtle">
+                            Không có thông báo nào.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
 
               {/* User dropdown */}
               <div className="relative">

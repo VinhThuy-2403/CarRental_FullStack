@@ -2,6 +2,7 @@ package com.carrental.module.booking;
 
 import com.carrental.common.enums.BookingStatus;
 import com.carrental.common.enums.CalendarStatus;
+import com.carrental.common.enums.NotificationType;
 import com.carrental.common.enums.PaymentMethod;
 import com.carrental.common.exception.AppException;
 import com.carrental.module.booking.dto.BookingDtos.*;
@@ -9,6 +10,7 @@ import com.carrental.module.car.Car;
 import com.carrental.module.car.CarCalendar;
 import com.carrental.module.car.CarCalendarRepository;
 import com.carrental.module.car.CarRepository;
+import com.carrental.module.notification.NotificationService;
 import com.carrental.module.user.User;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final CarRepository carRepository;
     private final CarCalendarRepository calendarRepository;
+    private final NotificationService notificationService;
 
     // ─── Tạo đơn đặt xe ─────────────────────────────────
 
@@ -109,7 +112,22 @@ public class BookingService {
             booking.setConfirmDeadline(LocalDateTime.now().plusHours(2));
         }
 
-        return bookingRepository.save(booking);
+        // 1. Lưu booking vào database và gán vào biến savedBooking
+        Booking savedBooking = bookingRepository.save(booking);
+
+        // 2. Bắn thông báo cho Host
+        notificationService.createNotification(
+                car.getHost().getId(),
+                NotificationType.NEW_BOOKING,
+                "Có đơn đặt xe mới!",
+                "Khách hàng " + customer.getFullName() + " vừa đặt chiếc " 
+                + car.getBrand() + " " + car.getModel() + " của bạn.",
+                savedBooking.getId()
+        );
+
+        // 3. Return biến đã lưu
+        return savedBooking;
+    
     }
 
     // ─── Sau khi thanh toán thành công ──────────────────
@@ -149,6 +167,15 @@ public class BookingService {
         markCalendarBooked(booking);
 
         log.info("Host {} confirmed booking {}", host.getEmail(), bookingId);
+        notificationService.createNotification(
+                booking.getCustomer().getId(),
+                NotificationType.BOOKING_CONFIRMED,
+                "Đơn đặt xe đã được xác nhận!",
+                "Chủ xe đã duyệt đơn thuê chiếc " + booking.getCar().getBrand() 
+                + " của bạn. Vui lòng chuẩn bị nhận xe nhé!",
+                booking.getId()
+        );
+
     }
 
     // ─── Host: Từ chối đơn ──────────────────────────────
@@ -167,6 +194,14 @@ public class BookingService {
 
         log.info("Host {} rejected booking {}: {}", host.getEmail(), bookingId, reason);
         // TODO: trigger hoàn tiền tự động nếu đã thanh toán
+        notificationService.createNotification(
+                booking.getCustomer().getId(),
+                NotificationType.BOOKING_CANCELLED,
+                "Đơn đặt xe bị từ chối",
+                "Chủ xe đã từ chối đơn thuê chiếc " + booking.getCar().getBrand() 
+                + " của bạn với lý do: " + reason,
+                booking.getId()
+        );
     }
 
     // ─── Customer: Hủy đơn ──────────────────────────────
@@ -199,6 +234,13 @@ public class BookingService {
         }
 
         log.info("Customer {} cancelled booking {}", customer.getEmail(), bookingId);
+        notificationService.createNotification(
+                booking.getCar().getHost().getId(),
+                NotificationType.BOOKING_CANCELLED,
+                "Đơn đặt xe đã bị hủy",
+                "Khách hàng đã hủy đơn đặt chiếc " + booking.getCar().getBrand() + ".",
+                booking.getId()
+        );
     }
 
     @Transactional
@@ -229,6 +271,13 @@ public class BookingService {
         booking.setStatus(BookingStatus.COMPLETED);
         bookingRepository.save(booking);
         log.info("Booking {} completed by host {}", bookingId, host.getEmail());
+        notificationService.createNotification(
+                booking.getCustomer().getId(),
+                NotificationType.BOOKING_COMPLETED,
+                "Chuyến đi hoàn tất",
+                "Chuyến đi của bạn đã hoàn thành. Đừng quên để lại đánh giá cho xe nhé!",
+                booking.getId()
+        );
     }
 
     // ─── Customer: Xem danh sách đơn ────────────────────
