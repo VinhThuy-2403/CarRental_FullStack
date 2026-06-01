@@ -17,4 +17,11 @@ export const userApi = {
 
   getPublicProfile: (id) =>
     api.get(`/users/${id}/public`),
+
+  // ── Host Request ──────────────────────────────────────
+  requestHost: () =>
+    api.post('/users/me/request-host'),
+
+  getMyHostRequestStatus: () =>
+    api.get('/users/me/request-host/status'),
 }

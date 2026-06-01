@@ -21,4 +21,7 @@ export const authApi = {
 
   changePassword: (currentPassword, newPassword) =>
     api.patch('/auth/change-password', { currentPassword, newPassword }),
+
+  googleLogin: (idToken, role = null) =>
+    api.post('/auth/google', { idToken, role }),
 }

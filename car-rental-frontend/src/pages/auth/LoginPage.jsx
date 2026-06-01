@@ -8,6 +8,9 @@ import toast from 'react-hot-toast'
 import { authApi } from '@/api/authApi'
 import useAuthStore from '@/store/authStore'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+import GoogleLoginButton from '@/components/common/GoogleLoginButton'
+import GoogleRoleModal from '@/components/common/GoogleRoleModal'
+import { useGoogleAuth } from '@/hooks/useGoogleAuth'
 import { useQueryClient } from '@tanstack/react-query'
 
 const schema = z.object({
@@ -28,6 +31,16 @@ export default function LoginPage() {
   })
 
   const queryClient = useQueryClient()
+
+  // Google OAuth flow (hook dùng chung)
+  const {
+    handleGoogleSuccess,
+    handleRoleSelect,
+    showRoleModal,
+    setShowRoleModal,
+    googleLoading,
+  } = useGoogleAuth()
+
   const onSubmit = async (data) => {
     setLoading(true)
     try {
@@ -35,10 +48,9 @@ export default function LoginPage() {
       const { accessToken, refreshToken, user } = res.data.data
       setAuth({ user, accessToken, refreshToken })
       toast.success(`Chào mừng, ${user.fullName}!`)
-      // Redirect theo role
-      if (user.role === 'ADMIN')    navigate('/admin',  { replace: true })
+      if (user.role === 'ADMIN')     navigate('/admin',  { replace: true })
       else if (user.role === 'HOST') navigate('/host',   { replace: true })
-      else                          navigate(from,       { replace: true })
+      else                           navigate(from,       { replace: true })
     } catch (err) {
       toast.error(err.response?.data?.message || 'Đăng nhập thất bại')
     } finally {
@@ -117,6 +129,24 @@ export default function LoginPage() {
             </button>
           </form>
 
+          {/* Google Login */}
+          <div className="mt-5">
+            <div className="relative flex items-center">
+              <div className="flex-grow border-t border-border" />
+              <span className="mx-3 text-xs text-primary-subtle font-medium whitespace-nowrap">
+                Hoặc đăng nhập bằng
+              </span>
+              <div className="flex-grow border-t border-border" />
+            </div>
+            <div className="mt-4">
+              <GoogleLoginButton
+                onSuccess={handleGoogleSuccess}
+                onError={() => toast.error('Google đăng nhập thất bại')}
+                text="signin_with"
+              />
+            </div>
+          </div>
+
           <p className="text-center text-sm text-primary-subtle mt-5">
             Chưa có tài khoản?{' '}
             <Link to="/register" className="text-teal-600 font-semibold hover:text-teal-800">
@@ -125,6 +155,14 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      {/* Modal chọn role cho user Google mới */}
+      <GoogleRoleModal
+        isOpen={showRoleModal}
+        onSelect={handleRoleSelect}
+        onClose={() => setShowRoleModal(false)}
+        loading={googleLoading}
+      />
     </div>
   )
 }

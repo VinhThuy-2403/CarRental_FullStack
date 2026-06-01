@@ -2,6 +2,7 @@ package com.carrental.module.auth;
 
 import com.carrental.common.ApiResponse;
 import com.carrental.module.auth.dto.AuthDtos.*;
+import com.carrental.module.auth.dto.GoogleLoginRequest;
 import com.carrental.module.auth.dto.RegisterRequest;
 import com.carrental.module.user.User;
 import jakarta.validation.Valid;
@@ -30,6 +31,12 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(authService.login(request), "Đăng nhập thành công"));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<GoogleAuthResponse>> googleLogin(
+            @Valid @RequestBody GoogleLoginRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(authService.loginWithGoogle(request), "OK"));
     }
 
     @PostMapping("/refresh")

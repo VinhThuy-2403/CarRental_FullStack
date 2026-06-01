@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Upload, Eye, EyeOff, Loader, LogOut, User,
   Car, Clock, CheckCircle, XCircle, ChevronRight,
+  Home, ArrowUpCircle, AlertCircle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { userApi } from '@/api/userApi'
@@ -184,6 +185,23 @@ export default function ProfilePage() {
     onError: (err) => toast.error(err.response?.data?.message || 'Đổi mật khẩu thất bại'),
   })
 
+  // ── Host Request ──────────────────────────────────────
+  const { data: hostReqRes, refetch: refetchHostReq } = useQuery({
+    queryKey: ['my-host-request'],
+    queryFn:  () => userApi.getMyHostRequestStatus(),
+    enabled:  isCustomer,
+  })
+  const hostReqStatus = hostReqRes?.data?.data?.status // 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED'
+
+  const requestHostMutation = useMutation({
+    mutationFn: () => userApi.requestHost(),
+    onSuccess: () => {
+      toast.success('Đã gửi yêu cầu! Admin sẽ xem xét sớm 🚀')
+      refetchHostReq()
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Gửi yêu cầu thất bại'),
+  })
+
   // ── Handlers ──────────────────────────────────────────
   const handleAvatarSelect = (e) => {
     const file = e.target.files?.[0]
@@ -306,6 +324,57 @@ export default function ProfilePage() {
                 <LogOut className="w-4 h-4" />
                 Đăng xuất
               </button>
+
+              {/* Banner nâng cấp Host (chỉ CUSTOMER) */}
+              {isCustomer && hostReqStatus !== 'APPROVED' && (
+                <div className="mt-4">
+                  {hostReqStatus === 'PENDING' ? (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Clock className="w-4 h-4 text-yellow-600 shrink-0" />
+                        <p className="text-xs font-semibold text-yellow-700">Đang chờ duyệt</p>
+                      </div>
+                      <p className="text-xs text-yellow-600">Yêu cầu trở thành Host của bạn đang được xem xét.</p>
+                    </div>
+                  ) : hostReqStatus === 'REJECTED' ? (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                        <p className="text-xs font-semibold text-red-600">Yêu cầu bị từ chối</p>
+                      </div>
+                      <p className="text-xs text-red-500 mb-2">
+                        {hostReqRes?.data?.data?.adminNote || 'Admin đã từ chối yêu cầu.'}
+                      </p>
+                      <button
+                        onClick={() => requestHostMutation.mutate()}
+                        disabled={requestHostMutation.isPending}
+                        className="w-full py-1.5 bg-red-600 text-white rounded-lg text-xs font-semibold
+                                   hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        Gửi lại yêu cầu
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Bạn muốn gửi yêu cầu trở thành Host để đăng xe cho thuê?'))
+                          requestHostMutation.mutate()
+                      }}
+                      disabled={requestHostMutation.isPending}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5
+                                 text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg
+                                 text-sm font-semibold hover:bg-indigo-100 transition-colors
+                                 disabled:opacity-50"
+                    >
+                      {requestHostMutation.isPending
+                        ? <Loader className="w-4 h-4 animate-spin" />
+                        : <Home className="w-4 h-4" />
+                      }
+                      Trở thành Host
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

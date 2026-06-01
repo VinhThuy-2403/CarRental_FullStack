@@ -30,8 +30,12 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
-    @Column(nullable = false)
+    @Column
     private String password;
+
+    // Google OAuth2
+    @Column(name = "google_id", unique = true)
+    private String googleId;
 
     @Column(length = 15)
     private String phone;

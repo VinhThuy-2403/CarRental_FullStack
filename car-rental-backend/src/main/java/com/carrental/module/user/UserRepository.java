@@ -19,6 +19,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
 
+    Optional<User> findByGoogleId(String googleId);
+
     Optional<User> findByResetPasswordToken(String token);
 
     // ── Admin queries ────────────────────────────────────

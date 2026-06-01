@@ -7,6 +7,9 @@ import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { authApi } from '@/api/authApi'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+import GoogleLoginButton from '@/components/common/GoogleLoginButton'
+import GoogleRoleModal from '@/components/common/GoogleRoleModal'
+import { useGoogleAuth } from '@/hooks/useGoogleAuth'
 
 const schema = z.object({
   fullName: z.string().min(2, 'Họ tên tối thiểu 2 ký tự'),
@@ -29,6 +32,15 @@ export default function RegisterPage() {
     defaultValues: { role: 'CUSTOMER' },
   })
   const selectedRole = watch('role')
+
+  // Google OAuth flow (hook dùng chung)
+  const {
+    handleGoogleSuccess,
+    handleRoleSelect,
+    showRoleModal,
+    setShowRoleModal,
+    googleLoading,
+  } = useGoogleAuth()
 
   const onSubmit = async (data) => {
     setLoading(true)
@@ -128,12 +140,38 @@ export default function RegisterPage() {
             </button>
           </form>
 
+          {/* Google Register */}
+          <div className="mt-5">
+            <div className="relative flex items-center">
+              <div className="flex-grow border-t border-border" />
+              <span className="mx-3 text-xs text-primary-subtle font-medium whitespace-nowrap">
+                Hoặc tiếp tục với
+              </span>
+              <div className="flex-grow border-t border-border" />
+            </div>
+            <div className="mt-4">
+              <GoogleLoginButton
+                onSuccess={handleGoogleSuccess}
+                onError={() => toast.error('Google đăng ký thất bại')}
+                text="signup_with"
+              />
+            </div>
+          </div>
+
           <p className="text-center text-sm text-primary-subtle mt-5">
             Đã có tài khoản?{' '}
             <Link to="/login" className="text-teal-600 font-semibold hover:text-teal-800">Đăng nhập</Link>
           </p>
         </div>
       </div>
+
+      {/* Modal chọn role cho user Google mới */}
+      <GoogleRoleModal
+        isOpen={showRoleModal}
+        onSelect={handleRoleSelect}
+        onClose={() => setShowRoleModal(false)}
+        loading={googleLoading}
+      />
     </div>
   )
 }

@@ -4,10 +4,15 @@ import com.carrental.common.enums.Role;
 import com.carrental.common.enums.UserStatus;
 import com.carrental.common.exception.AppException;
 import com.carrental.module.auth.dto.AuthDtos.*;
+import com.carrental.module.auth.dto.GoogleLoginRequest;
 import com.carrental.module.auth.dto.RegisterRequest;
 import com.carrental.module.user.User;
 import com.carrental.module.user.UserRepository;
 import com.carrental.security.JwtUtil;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +25,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.UUID;
 
 @Slf4j
@@ -36,6 +42,9 @@ public class AuthService {
 
     @Value("${app.base-url}")
     private String baseUrl;
+
+    @Value("${google.client-id}")
+    private String googleClientId;
 
     // ─── Register ────────────────────────────────────────
 
@@ -107,7 +116,115 @@ public class AuthService {
         return response;
     }
 
+    // ─── Google Login ─────────────────────────────────────
+
+    @Transactional
+    public GoogleAuthResponse loginWithGoogle(GoogleLoginRequest request) {
+        // 1. Verify id_token với Google
+        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                new NetHttpTransport(), GsonFactory.getDefaultInstance())
+                .setAudience(Collections.singletonList(googleClientId))
+                .build();
+
+        GoogleIdToken idToken;
+        try {
+            idToken = verifier.verify(request.getIdToken());
+        } catch (Exception e) {
+            throw AppException.badRequest("Không thể xác thực Google token");
+        }
+
+        if (idToken == null) {
+            throw AppException.unauthorized("Google token không hợp lệ hoặc đã hết hạn");
+        }
+
+        GoogleIdToken.Payload payload = idToken.getPayload();
+        String googleId  = payload.getSubject();
+        String email     = payload.getEmail();
+        String fullName  = (String) payload.get("name");
+        String avatarUrl = (String) payload.get("picture");
+
+        // 2. Tìm user theo googleId hoặc email
+        User user = userRepository.findByGoogleId(googleId)
+                .or(() -> userRepository.findByEmail(email))
+                .orElse(null);
+
+        if (user == null) {
+            // 3a. User mới — cần chọn role
+            if (request.getRole() == null) {
+                // Chưa có role → yêu cầu frontend hiện modal chọn role
+                return GoogleAuthResponse.requireRole();
+            }
+
+            // Không cho phép tự đăng ký làm ADMIN
+            if (request.getRole() == Role.ADMIN) {
+                throw AppException.forbidden("Không thể đăng ký với vai trò Admin");
+            }
+
+            // Đã có role → tạo user mới
+            user = User.builder()
+                    .fullName(fullName != null ? fullName : email)
+                    .email(email)
+                    .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                    .googleId(googleId)
+                    .avatarUrl(avatarUrl)
+                    .role(request.getRole())
+                    .status(UserStatus.ACTIVE)
+                    .build();
+            userRepository.save(user);
+            log.info("Created new user via Google OAuth: {} (role={})", email, request.getRole());
+
+        } else {
+            // 3b. User đã tồn tại — cập nhật googleId / avatar nếu chưa có
+            boolean changed = false;
+            if (user.getGoogleId() == null) {
+                user.setGoogleId(googleId);
+                changed = true;
+            }
+            if (avatarUrl != null && user.getAvatarUrl() == null) {
+                user.setAvatarUrl(avatarUrl);
+                changed = true;
+            }
+            if (user.getStatus() == UserStatus.LOCKED) {
+                throw AppException.forbidden("Tài khoản đã bị khóa. Vui lòng liên hệ admin.");
+            }
+            if (changed) userRepository.save(user);
+        }
+
+        // 4. Tạo token hệ thống
+        return GoogleAuthResponse.success(buildLoginResponse(user));
+    }
+
+    // ─── Helper: build LoginResponse ─────────────────────
+
+    private LoginResponse buildLoginResponse(User user) {
+        refreshTokenRepository.revokeAllUserTokens(user);
+
+        String accessToken  = jwtUtil.generateAccessToken(user);
+        String refreshToken = jwtUtil.generateRefreshToken(user);
+
+        refreshTokenRepository.save(RefreshToken.builder()
+                .user(user)
+                .token(refreshToken)
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .build());
+
+        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo();
+        userInfo.setId(user.getId());
+        userInfo.setFullName(user.getFullName());
+        userInfo.setEmail(user.getEmail());
+        userInfo.setRole(user.getRole().name());
+        userInfo.setAvatarUrl(user.getAvatarUrl());
+
+        LoginResponse response = new LoginResponse();
+        response.setAccessToken(accessToken);
+        response.setRefreshToken(refreshToken);
+        response.setUser(userInfo);
+
+        return response;
+    }
+
     // ─── Refresh Token ───────────────────────────────────
+
 
     @Transactional
     public TokenRefreshResponse refresh(TokenRefreshRequest request) {

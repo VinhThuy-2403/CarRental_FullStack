@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search, Lock, Unlock, Eye, Users,
   ChevronLeft, ChevronRight, X, Car, FileText,
+  Home, CheckCircle, XCircle, Clock,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { adminApi } from '@/api/adminApi'
@@ -169,9 +170,164 @@ function ActivityModal({ userId, onClose }) {
   )
 }
 
+// ─── Host Request Tab ─────────────────────────────────
+function HostRequestsTab() {
+  const queryClient = useQueryClient()
+  const [page, setPage] = useState(0)
+  const [rejectModal, setRejectModal] = useState(null) // { id, name }
+  const [rejectNote, setRejectNote]   = useState('')
+
+  const { data: res, isLoading } = useQuery({
+    queryKey: ['admin-host-requests', page],
+    queryFn:  () => adminApi.getHostRequests({ page, size: 10 }),
+  })
+  const data       = res?.data?.data
+  const requests   = data?.content   || []
+  const totalPages = data?.totalPages || 0
+
+  const approveMutation = useMutation({
+    mutationFn: (id) => adminApi.approveHostRequest(id),
+    onSuccess: () => {
+      toast.success('Đã duyệt! Tài khoản được nâng cấp lên Host 🎉')
+      queryClient.invalidateQueries(['admin-host-requests'])
+      queryClient.invalidateQueries(['admin-users'])
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Thất bại'),
+  })
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ id, note }) => adminApi.rejectHostRequest(id, note),
+    onSuccess: () => {
+      toast.success('Đã từ chối yêu cầu')
+      setRejectModal(null)
+      setRejectNote('')
+      queryClient.invalidateQueries(['admin-host-requests'])
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Thất bại'),
+  })
+
+  return (
+    <div className="space-y-4">
+      {isLoading ? (
+        <div className="flex justify-center py-16"><LoadingSpinner /></div>
+      ) : requests.length === 0 ? (
+        <div className="bg-surface border border-border rounded-2xl py-16 text-center">
+          <Home className="w-10 h-10 text-primary-subtle mx-auto mb-3 opacity-40" />
+          <p className="text-primary-muted font-medium">Không có yêu cầu nào đang chờ duyệt</p>
+        </div>
+      ) : (
+        <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+          <div className="divide-y divide-border">
+            {requests.map((r) => (
+              <div key={r.id} className="flex items-center gap-4 px-5 py-4 hover:bg-surface-soft transition-colors">
+                {/* Avatar */}
+                <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100
+                                flex items-center justify-center text-indigo-600 font-bold text-sm shrink-0">
+                  {r.userAvatarUrl
+                    ? <img src={r.userAvatarUrl} className="w-full h-full rounded-full object-cover" />
+                    : r.userFullName?.charAt(0).toUpperCase()
+                  }
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-primary text-sm">{r.userFullName}</p>
+                  <p className="text-xs text-primary-subtle">{r.userEmail}</p>
+                  <p className="text-xs text-primary-subtle mt-0.5">
+                    Gửi lúc: {new Date(r.requestedAt).toLocaleString('vi-VN')}
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Duyệt yêu cầu Host của "${r.userFullName}"?`))
+                        approveMutation.mutate(r.id)
+                    }}
+                    disabled={approveMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white
+                               rounded-lg text-xs font-semibold hover:bg-teal-700 transition-colors
+                               disabled:opacity-50"
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" /> Duyệt
+                  </button>
+                  <button
+                    onClick={() => { setRejectModal({ id: r.id, name: r.userFullName }); setRejectNote('') }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600
+                               border border-red-200 rounded-lg text-xs font-semibold
+                               hover:bg-red-100 transition-colors"
+                  >
+                    <XCircle className="w-3.5 h-3.5" /> Từ chối
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
+            className="btn-secondary px-4 py-2 text-sm disabled:opacity-40">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm text-primary-subtle">Trang {page + 1} / {totalPages}</span>
+          <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}
+            className="btn-secondary px-4 py-2 text-sm disabled:opacity-40">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {rejectModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-surface rounded-2xl shadow-modal w-full max-w-md p-6 animate-slide-up">
+            <h3 className="font-bold text-primary mb-1">Từ chối yêu cầu</h3>
+            <p className="text-sm text-primary-subtle mb-4">
+              Đang từ chối yêu cầu của <span className="font-semibold">{rejectModal.name}</span>
+            </p>
+            <label className="block text-xs font-semibold text-primary-subtle uppercase tracking-wider mb-1.5">
+              Lý do (hiển thị cho user)
+            </label>
+            <textarea
+              value={rejectNote}
+              onChange={(e) => setRejectNote(e.target.value)}
+              placeholder="VD: Hồ sơ chưa đầy đủ, vui lòng liên hệ lại..."
+              rows={3}
+              className="w-full border border-border rounded-xl px-4 py-2.5 text-sm
+                         focus:outline-none focus:ring-2 focus:ring-teal-400/25 resize-none"
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => rejectMutation.mutate({ id: rejectModal.id, note: rejectNote })}
+                disabled={rejectMutation.isPending}
+                className="flex-1 bg-red-600 text-white py-2.5 rounded-xl text-sm font-semibold
+                           hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                Xác nhận từ chối
+              </button>
+              <button
+                onClick={() => setRejectModal(null)}
+                className="flex-1 bg-surface-soft border border-border py-2.5 rounded-xl
+                           text-sm font-semibold hover:bg-surface-muted transition-colors"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────
 export default function AdminUsersPage() {
   const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = useState('users')
   const [keyword,  setKeyword]  = useState('')
   const [role,     setRole]     = useState('')
   const [status,   setStatus]   = useState('')
@@ -222,6 +378,28 @@ export default function AdminUsersPage() {
           <h1 className="text-2xl font-bold text-primary">Người dùng</h1>
           <p className="text-sm text-primary-subtle mt-0.5">Quản lý tài khoản hệ thống</p>
         </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-border">
+          {[
+            { key: 'users',    label: 'Danh sách', icon: Users },
+            { key: 'requests', label: 'Yêu cầu Host', icon: Home },
+          ].map(({ key, label, icon: Icon }) => (
+            <button key={key} onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold
+                          border-b-2 transition-colors ${
+                activeTab === key
+                  ? 'text-primary border-teal-600'
+                  : 'text-primary-muted border-transparent hover:text-primary'
+              }`}>
+              <Icon className="w-4 h-4" />{label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'requests' ? (
+          <HostRequestsTab />
+        ) : (<>
 
         {/* Filters */}
         <div className="flex gap-3 flex-wrap">
@@ -385,6 +563,7 @@ export default function AdminUsersPage() {
             </button>
           </div>
         )}
+        </>) /* end users tab */}
       </div>
 
       {viewUser && (

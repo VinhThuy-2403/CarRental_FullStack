@@ -8,6 +8,28 @@ import lombok.Data;
 // ─── Login ────────────────────────────────────────────
 public class AuthDtos {
 
+    // ─── Google Auth Response ─────────────────────────
+    // needsRoleSelection = true  → user mới, frontend cần hiện modal chọn role
+    // needsRoleSelection = false → đăng nhập thành công, loginData có token
+    @Data
+    public static class GoogleAuthResponse {
+        private boolean needsRoleSelection;
+        private LoginResponse loginData;
+
+        public static GoogleAuthResponse requireRole() {
+            GoogleAuthResponse r = new GoogleAuthResponse();
+            r.setNeedsRoleSelection(true);
+            return r;
+        }
+
+        public static GoogleAuthResponse success(LoginResponse loginData) {
+            GoogleAuthResponse r = new GoogleAuthResponse();
+            r.setNeedsRoleSelection(false);
+            r.setLoginData(loginData);
+            return r;
+        }
+    }
+
     @Data
     public static class LoginRequest {
         @NotBlank(message = "Email không được để trống")

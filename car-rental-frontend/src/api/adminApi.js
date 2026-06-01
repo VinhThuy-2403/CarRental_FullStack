@@ -37,4 +37,14 @@ export const adminApi = {
   // ── Bookings ──────────────────────────────────────────
   getAllBookings: (params) =>
     api.get('/admin/bookings', { params }),
+
+  // ── Host Requests ─────────────────────────────────────
+  getHostRequests: (params) =>
+    api.get('/admin/host-requests', { params }),
+
+  approveHostRequest: (id) =>
+    api.patch(`/admin/host-requests/${id}/approve`),
+
+  rejectHostRequest: (id, adminNote = '') =>
+    api.patch(`/admin/host-requests/${id}/reject`, { adminNote }),
 }
