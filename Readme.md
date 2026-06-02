@@ -1,45 +1,45 @@
 # 🚗 Car Rental Platform (Full-Stack)
 
-A comprehensive, full-stack Car Rental application designed to connect car owners (Hosts) with renters (Customers) seamlessly[cite: 3]. The platform provides a robust system for vehicle management, booking workflows, and secure online payments[cite: 3].
+A comprehensive, full-stack Car Rental application designed to connect car owners (Hosts) with renters (Customers) seamlessly. The platform provides a robust system for vehicle management, booking workflows, and secure online payments.
 
 ## ✨ Features
 
-The application is divided into three main role-based modules[cite: 3]:
+The application is divided into three main role-based modules:
 
 ### 👤 Customer (Renter)
-* Browse and search for available cars using various filters[cite: 3].
-* View detailed car information, including availability calendars and reviews[cite: 3].
-* Book cars and manage booking history[cite: 3].
-* Process secure online payments using integrating gateways (VNPay)[cite: 3].
-* Authenticate using traditional email/password or Google Login[cite: 3].
+* Browse and search for available cars using various filters.
+* View detailed car information, including availability calendars and reviews.
+* Book cars and manage booking history.
+* Process secure online payments using integrating gateways (VNPay).
+* Authenticate using traditional email/password or Google Login.
 
 ### 🏠 Host (Car Owner)
-* Dedicated Host Dashboard to track revenue and statistics[cite: 3].
-* Add, edit, and manage car listings (Car Form, My Cars)[cite: 3].
-* Manage car availability using a dynamic calendar system[cite: 3].
-* Handle incoming booking requests from customers[cite: 3].
+* Dedicated Host Dashboard to track revenue and statistics.
+* Add, edit, and manage car listings (Car Form, My Cars).
+* Manage car availability using a dynamic calendar system.
+* Handle incoming booking requests from customers.
 
 ### 👑 Admin
-* Global administrative dashboard for system overview[cite: 3].
-* Manage all users, cars, and bookings across the platform[cite: 3].
+* Global administrative dashboard for system overview.
+* Manage all users, cars, and bookings across the platform.
 
 ## 🛠️ Technology Stack
 
 ### Front-end
-* **Framework:** ReactJS powered by Vite[cite: 3].
-* **Styling:** Tailwind CSS[cite: 3].
-* **State Management:** Custom stores (e.g., `authStore.js`)[cite: 3].
-* **Architecture:** Component-based design with specific layouts (`AdminLayout`, `HostLayout`, `MainLayout`) and protected routing (`Protectedroute.jsx`)[cite: 3].
+* **Framework:** ReactJS powered by Vite.
+* **Styling:** Tailwind CSS.
+* **State Management:** Custom stores (e.g., `authStore.js`).
+* **Architecture:** Component-based design with specific layouts (`AdminLayout`, `HostLayout`, `MainLayout`) and protected routing (`Protectedroute.jsx`).
 
 ### Back-end
-* **Framework:** Java Spring Boot with Maven (`pom.xml`, `mvnw`)[cite: 3].
-* **Security:** Spring Security with JSON Web Tokens (JWT) for stateless authentication (`JwtAuthFilter`, `JwtUtil`)[cite: 3].
-* **Database & ORM:** Spring Data JPA (Repositories for User, Car, Booking, Payment, Review, etc.)[cite: 3].
+* **Framework:** Java Spring Boot with Maven (`pom.xml`, `mvnw`).
+* **Security:** Spring Security with JSON Web Tokens (JWT) for stateless authentication (`JwtAuthFilter`, `JwtUtil`).
+* **Database & ORM:** Spring Data JPA (Repositories for User, Car, Booking, Payment, Review, etc.).
 
 ### Third-party Integrations
-* **Payments:** VNPay (`VNPayService`)[cite: 3].
-* **Cloud Storage:** Cloudinary for seamless car image uploads and management (`CloudinaryConfig`)[cite: 3].
-* **Authentication:** Google OAuth2 integration (`GoogleLoginRequest`)[cite: 3].
+* **Payments:** VNPay (`VNPayService`).
+* **Cloud Storage:** Cloudinary for seamless car image uploads and management (`CloudinaryConfig`).
+* **Authentication:** Google OAuth2 integration (`GoogleLoginRequest`).
 
 ## 📁 Project Structure
 
@@ -86,11 +86,11 @@ This directory contains the ReactJS application[cite: 4, 5], designed with a sca
 * Maven
 
 ### Backend Setup
-1. Navigate to the backend directory: `cd car-rental-backend`[cite: 3].
-2. Configure your environment variables in `src/main/resources/application.properties` (Database credentials, JWT secret, Cloudinary keys, VNPay credentials)[cite: 3].
-3. Run the application: `./mvnw spring-boot:run`[cite: 3].
+1. Navigate to the backend directory: `cd car-rental-backend`.
+2. Configure your environment variables in `src/main/resources/application.properties` (Database credentials, JWT secret, Cloudinary keys, VNPay credentials).
+3. Run the application: `./mvnw spring-boot:run`.
 
 ### Frontend Setup
-1. Navigate to the frontend directory: `cd car-rental-frontend`[cite: 3].
-2. Install dependencies: `npm install`[cite: 3].
-3. Start the development server: `npm run dev`[cite: 3].
+1. Navigate to the frontend directory: `cd car-rental-frontend`.
+2. Install dependencies: `npm install`.
+3. Start the development server: `npm run dev`.
