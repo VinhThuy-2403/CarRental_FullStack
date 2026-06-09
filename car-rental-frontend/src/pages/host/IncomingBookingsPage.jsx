@@ -139,6 +139,26 @@ export default function IncomingBookingsPage() {
             >
               Đang thuê
             </button>
+            <button
+              onClick={() => setFilterStatus('COMPLETED')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filterStatus === 'COMPLETED'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-surface-soft text-primary hover:bg-surface-muted'
+              }`}
+            >
+              Hoàn thành
+            </button>
+            <button
+              onClick={() => setFilterStatus('CANCELLED')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filterStatus === 'CANCELLED'
+                  ? 'bg-gray-600 text-white'
+                  : 'bg-surface-soft text-primary hover:bg-surface-muted'
+              }`}
+            >
+              Đã hủy
+            </button>
           </div>
         </div>
 

@@ -533,53 +533,22 @@ export default function CarFormPage() {
 
           {/* ── Section 4: Giá thuê ──────────────────────── */}
           <div className="bg-surface border border-border rounded-2xl p-6">
-            <h2 className="text-lg font-bold text-primary mb-4">Giá thuê & Điều kiện</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-              <div>
-                <label className={labelCls}>Giá thuê / ngày (VNĐ)</label>
-                <input
-                  {...register('pricePerDay')}
-                  type="number"
-                  min={100000}
-                  step={50000}
-                  className={inputCls}
-                />
-                {errors.pricePerDay && <p className="text-red-500 text-xs mt-1">{errors.pricePerDay.message}</p>}
-                {watch('pricePerDay') > 0 && (
-                  <p className="text-teal-600 text-xs mt-1">
-                    ≈ {Number(watch('pricePerDay')).toLocaleString('vi-VN')}đ
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className={labelCls}>Tiền đặt cọc (VNĐ)</label>
-                <input
-                  {...register('deposit')}
-                  type="number"
-                  min={0}
-                  step={100000}
-                  className={inputCls}
-                />
-                {watch('deposit') > 0 && (
-                  <p className="text-primary-subtle text-xs mt-1">
-                    ≈ {Number(watch('deposit')).toLocaleString('vi-VN')}đ
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className={labelCls}>Giới hạn km / ngày</label>
-                <input
-                  {...register('kmLimitPerDay')}
-                  type="number"
-                  min={0}
-                  step={50}
-                  className={inputCls}
-                />
-                <p className="text-primary-subtle text-xs mt-1">0 = không giới hạn</p>
-              </div>
+            <h2 className="text-lg font-bold text-primary mb-4">Giá thuê</h2>
+            <div className="max-w-md">
+              <label className={labelCls}>Giá thuê / ngày (VNĐ)</label>
+              <input
+                {...register('pricePerDay')}
+                type="number"
+                min={100000}
+                step={50000}
+                className={inputCls}
+              />
+              {errors.pricePerDay && <p className="text-red-500 text-xs mt-1">{errors.pricePerDay.message}</p>}
+              {watch('pricePerDay') > 0 && (
+                <p className="text-teal-600 text-xs mt-1">
+                  ≈ {Number(watch('pricePerDay')).toLocaleString('vi-VN')}đ
+                </p>
+              )}
             </div>
           </div>
 
