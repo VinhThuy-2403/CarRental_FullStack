@@ -291,11 +291,6 @@ export default function BookingDetailPage() {
         const url = res.data?.data?.paymentUrl
         if (url) { window.location.href = url; return }
       }
-      if (booking.paymentMethod === 'MOMO') {
-        const res = await paymentApi.createMoMo(booking.id)
-        const url = res.data?.data?.paymentUrl
-        if (url) { window.location.href = url; return }
-      }
       toast.error('Không thể tạo URL thanh toán')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Lỗi kết nối cổng thanh toán')
@@ -314,7 +309,7 @@ export default function BookingDetailPage() {
   const statusCfg   = STATUS_CONFIG[booking.status] || STATUS_CONFIG.CANCELLED
   const pmCfg       = PAYMENT_LABEL[booking.paymentMethod]
   const canCancel   = isCustomer && ['PENDING_PAYMENT', 'PENDING_CONFIRM', 'CONFIRMED'].includes(booking.status)
-  const needRepay   = booking.status === 'PENDING_PAYMENT' && booking.paymentMethod !== 'CASH'
+  const needRepay   = isCustomer && booking.status === 'PENDING_PAYMENT' && booking.paymentMethod !== 'CASH'
 
   
 

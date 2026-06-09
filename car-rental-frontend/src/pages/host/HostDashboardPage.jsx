@@ -55,17 +55,23 @@ export default function HostDashboardPage() {
     queryFn: () => bookingApi.getIncomingBookings({ page: 0, size: 5 }),
   })
 
+  const { data: completedRes, isLoading: loadingCompleted } = useQuery({
+    queryKey: ['incoming-bookings', 'COMPLETED'],
+    queryFn: () => bookingApi.getIncomingBookings({ status: 'COMPLETED' }),
+  })
+
   const cars = carsRes?.data?.data || []
   const bookings = bookingsRes?.data?.data || []
+  const completedBookings = completedRes?.data?.data || []
 
   const stats = {
     totalCars: cars.length,
     activeCars: cars.filter(c => c.status === 'APPROVED').length,
     pendingBookings: bookings.length,
-    totalRevenue: cars.reduce((sum, car) => sum + (car.totalRevenue || 0), 0),
+    totalRevenue: completedBookings.reduce((sum, b) => sum + Number(b.totalPrice || 0), 0),
   }
 
-  const isLoading = loadingCars || loadingBookings
+  const isLoading = loadingCars || loadingBookings || loadingCompleted
 
   if (isLoading) return <LoadingSpinner />
 
@@ -96,8 +102,8 @@ export default function HostDashboardPage() {
           />
           <StatCard
             icon={TrendingUp}
-            label="Doanh thu (tháng)"
-            value={`${(stats.totalRevenue / 1_000_000).toFixed(1)}M`}
+            label="Doanh thu"
+            value={`${stats.totalRevenue.toLocaleString('vi-VN')} đ`}
             trend={8}
             color="bg-green-600"
           />

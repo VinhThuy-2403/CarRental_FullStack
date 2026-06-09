@@ -25,7 +25,7 @@ const schema = z.object({
     .regex(/^\d+$/, 'Chỉ nhập số'),
   driverPhone: z.string()
     .regex(/^(0[3|5|7|8|9])+([0-9]{8})$/, 'Số điện thoại không hợp lệ'),
-  paymentMethod: z.enum(['VNPAY', 'MOMO', 'CASH']),
+  paymentMethod: z.enum(['VNPAY', 'CASH']),
 })
 
 // ─── Payment method config ────────────────────────────
@@ -37,14 +37,6 @@ const PAYMENT_METHODS = [
     icon: <CreditCard className="w-5 h-5" />,
     color: 'text-blue-600',
     bg: 'bg-blue-50',
-  },
-  {
-    value: 'MOMO',
-    label: 'MoMo',
-    desc: 'Ví điện tử MoMo',
-    icon: <Wallet className="w-5 h-5" />,
-    color: 'text-pink-600',
-    bg: 'bg-pink-50',
   },
   {
     value: 'CASH',
@@ -93,8 +85,8 @@ export default function BookingPage() {
     if (!startDate || !endDate || !car) return { totalDays: 0, totalPrice: 0, depositAmount: 0 }
     const s = new Date(startDate)
     const e = new Date(endDate)
-    if (e <= s) return { totalDays: 0, totalPrice: 0, depositAmount: 0 }
-    const days    = Math.ceil((e - s) / (1000 * 60 * 60 * 24))
+    if (e < s) return { totalDays: 0, totalPrice: 0, depositAmount: 0 }
+    const days    = Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1
     const deposit = Number(car.deposit || 0)
     const price   = Number(car.pricePerDay || 0) * days + deposit
     return { totalDays: days, totalPrice: price, depositAmount: deposit }
@@ -148,12 +140,6 @@ export default function BookingPage() {
         const url = res.data?.data?.paymentUrl
         if (url) { window.location.href = url; return }
         throw new Error('Không lấy được URL thanh toán VNPay')
-      }
-      if (booking.paymentMethod === 'MOMO') {
-        const res = await paymentApi.createMoMo(booking.id)
-        const url = res.data?.data?.paymentUrl
-        if (url) { window.location.href = url; return }
-        throw new Error('Không lấy được URL thanh toán MoMo')
       }
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Lỗi kết nối cổng thanh toán')
@@ -225,7 +211,7 @@ export default function BookingPage() {
                         min={today}
                         onChange={(e) => {
                           setStartDate(e.target.value)
-                          if (endDate && e.target.value >= endDate) setEndDate('')
+                          if (endDate && e.target.value > endDate) setEndDate('')
                         }}
                         className={inputCls}
                         required
